@@ -72,7 +72,7 @@ class HotkeyRecorderViewBase: NSView {
         let colour: NSColor
         if isRecording {
             let pending = Self.symbols(for: liveModifiers)
-            text = pending.isEmpty ? "Type a shortcut…" : pending
+            text = pending.isEmpty ? tr("shortcuts.recording") : pending
             colour = pending.isEmpty ? .tertiaryLabelColor : .labelColor
         } else {
             text = displayText

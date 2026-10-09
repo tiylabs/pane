@@ -13,13 +13,17 @@ import { syntaxTree } from "@codemirror/language";
 
 import { blockAt, blocksIn, containerPrefixOf, linesOf, markerSpanEnd, quoteMarksOnly } from "./blocks";
 import { describe } from "./tooltip";
+import { onLanguageChange, t } from "./i18n";
 import { type ChangeSet, type EditorState, type Extension, type Line, StateEffect, StateField } from "@codemirror/state";
 import type { SyntaxNode } from "@lezer/common";
 import { EditorView } from "@codemirror/view";
 
 interface Button {
   label: string;
-  title: string;
+  /** Catalog key for the name (`editor.format.bold`) — the text is not a literal here. */
+  name: string;
+  /** The key cap printed after the name. These keys are fixed, so it is not translated. */
+  keys: string;
   className?: string;
   /** Wraps the selection, e.g. "**" for bold. */
   wrap?: string;
@@ -92,29 +96,34 @@ const SEPARATOR: unique symbol = Symbol("separator");
 const BUTTONS: (Button | typeof SEPARATOR)[] = [
   {
     label: "B",
-    title: "Bold ⌘B",
+    name: "editor.format.bold",
+    keys: "⌘B",
     className: "format-bar__bold",
     wrap: "**",
     active: ["StrongEmphasis"],
   },
-  { label: "I", title: "Italic ⌘I", className: "format-bar__italic", wrap: "*", active: ["Emphasis"] },
+  { label: "I", name: "editor.format.italic",
+    keys: "⌘I", className: "format-bar__italic", wrap: "*", active: ["Emphasis"] },
   {
     label: "S",
-    title: "Strikethrough ⇧⌘S",
+    name: "editor.format.strikethrough",
+    keys: "⇧⌘S",
     className: "format-bar__strike",
     wrap: "~~",
     active: ["Strikethrough"],
   },
   {
     label: "U",
-    title: "Underline ⌘U",
+    name: "editor.format.underline",
+    keys: "⌘U",
     className: "format-bar__underline",
     custom: (view: EditorView) => applyWrapPair(view, "<u>", "</u>"),
     activePair: ["<u>", "</u>"],
   },
   {
     label: "",
-    title: "Highlight ⇧⌘M",
+    name: "editor.format.highlight",
+    keys: "⇧⌘M",
     custom: (view: EditorView) => applyWrap(view, "=="),
     activePair: ["==", "=="],
     svg: icon(`<path d="m9 11-6 6v3h9l3-3" /><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4" />`),
@@ -122,7 +131,8 @@ const BUTTONS: (Button | typeof SEPARATOR)[] = [
   SEPARATOR,
   {
     label: "",
-    title: "Inline code ⌘E",
+    name: "editor.format.inlineCode",
+    keys: "⌘E",
     wrap: "`",
     active: ["InlineCode"],
     // The one letterform that had to go. `</>` set three characters in a 26px box and measured
@@ -132,21 +142,24 @@ const BUTTONS: (Button | typeof SEPARATOR)[] = [
   },
   {
     label: "",
-    title: "Code block ⌥⌘C",
+    name: "editor.format.codeBlock",
+    keys: "⌥⌘C",
     custom: applyCodeBlock,
     active: ["FencedCode"],
     svg: icon(`<path d="m10 9-3 3 3 3" /><path d="m14 15 3-3-3-3" /><rect x="3" y="3" width="18" height="18" rx="2" />`),
   },
   {
     label: "",
-    title: "Link ⌘L",
+    name: "editor.format.link",
+    keys: "⌘L",
     custom: applyLink,
     active: ["Link"],
     svg: icon(`<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />`),
   },
   {
     label: "",
-    title: "Quote ⇧⌘B",
+    name: "editor.format.quote",
+    keys: "⇧⌘B",
     custom: applyQuote,
     active: ["Blockquote"],
     svg: icon(`<path d="M17 5H3" /><path d="M21 12H8" /><path d="M21 19H8" /><path d="M3 12v7" />`),
@@ -156,14 +169,16 @@ const BUTTONS: (Button | typeof SEPARATOR)[] = [
   // looseness — numbered, bulleted, then tasks — rather than the arbitrary pair it was.
   {
     label: "",
-    title: "Numbered list ⇧⌘7",
+    name: "editor.format.orderedList",
+    keys: "⇧⌘7",
     custom: applyOrderedList,
     active: ["OrderedList"],
     svg: icon(`<path d="M11 5h10" /><path d="M11 12h10" /><path d="M11 19h10" /><path d="M4 4h1v5" /><path d="M4 9h2" /><path d="M6.5 20H3.4c0-1 2.6-1.925 2.6-3.5a1.5 1.5 0 0 0-2.6-1.02" />`),
   },
   {
     label: "",
-    title: "Bulleted list ⇧⌘8",
+    name: "editor.format.bulletList",
+    keys: "⇧⌘8",
     custom: applyBulletList,
     active: ["BulletList"],
     // A task is a bullet in the tree — `BulletList` > `ListItem` > `Task` — so this lit alongside
@@ -174,7 +189,8 @@ const BUTTONS: (Button | typeof SEPARATOR)[] = [
   },
   {
     label: "",
-    title: "Task list ⇧⌘9",
+    name: "editor.format.taskList",
+    keys: "⇧⌘9",
     custom: applyTaskList,
     active: ["Task"],
     svg: icon(`<path d="M13 5h8" /><path d="M13 12h8" /><path d="M13 19h8" /><path d="m3 17 2 2 4-4" /><path d="m3 7 2 2 4-4" />`),
@@ -1294,7 +1310,7 @@ export function mountFormatBar(
   // A single "H" button could only ever mean H1, which makes the other two levels undiscoverable.
   const heading = document.createElement("button");
   heading.className = "format-bar__heading";
-  describe(heading, "Heading");
+  const nameables: (() => void)[] = [() => describe(heading, t("editor.format.heading"))];
   heading.setAttribute("aria-haspopup", "true");
   heading.innerHTML = `H<svg class="format-bar__chevron" width="7" height="5" viewBox="0 0 7 5" aria-hidden="true"><path d="M0.5 1.2 3.5 4 6.5 1.2" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
   root.appendChild(heading);
@@ -1334,8 +1350,8 @@ export function mountFormatBar(
 
     const button = document.createElement("button");
     if (item.className) button.className = item.className;
-    button.setAttribute("aria-label", item.title);
-    describe(button, item.title);
+    const tip = () => `${t(item.name)} ${item.keys}`;
+    nameables.push(() => describe(button, tip()));
     if (item.svg) button.innerHTML = item.svg;
     else button.textContent = item.label;
 
@@ -1369,8 +1385,11 @@ export function mountFormatBar(
 
   const close = document.createElement("button");
   close.className = "format-bar__close";
-  describe(close, "Close ⌥⌘,");
-  close.setAttribute("aria-label", "Close formatting bar");
+  // The tip carries the key; the accessible name is the plain sentence, as before.
+  nameables.push(() => {
+    describe(close, `${t("editor.format.close")} ⌥⌘,`);
+    close.setAttribute("aria-label", t("editor.format.close"));
+  });
   // A filled disc rather than a bare glyph — it reads as "dismiss this bar" rather than as one more
   // formatting button that happens to look like an ✕.
   close.innerHTML = `<svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7.25" fill="currentColor" opacity="0.16"/><path d="M5.6 5.6l4.8 4.8M10.4 5.6l-4.8 4.8" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>`;
@@ -1380,6 +1399,10 @@ export function mountFormatBar(
     view.focus();
   });
   root.appendChild(close);
+
+  const nameAll = () => nameables.forEach((name) => name());
+  nameAll();
+  onLanguageChange(nameAll);
 
   return {
     refresh() {

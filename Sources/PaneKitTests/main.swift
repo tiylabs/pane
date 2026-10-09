@@ -21,5 +21,6 @@ runLinkTargetTests()
 runBuildProfileTests()
 runWelcomeNoteTests()
 runHotkeyPressTests()
+runLocalizationTests()
 
 exit(Check.finish())

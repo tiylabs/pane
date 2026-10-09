@@ -94,8 +94,33 @@ if [[ -d "$ROOT/Themes" ]]; then
 	cp -R "$ROOT/Themes/." "$CONTENTS/Resources/Themes/"
 fi
 
+# The interface languages (Locales/<code>/strings.json + welcome.md). Copied whole, so a new language
+# directory ships with no edit here. The Swift side reads them at runtime (PaneKit/Localization.swift)
+# and the web bundle has already inlined its `editor.*` half at build time.
+if [[ -d "$ROOT/Locales" ]]; then
+	mkdir -p "$CONTENTS/Resources/Locales"
+	# `README.md` is for contributors, not for the bundle.
+	rsync -a --exclude 'README.md' "$ROOT/Locales/" "$CONTENTS/Resources/Locales/"
+fi
+
 sed -e "s/__VERSION__/$VERSION/" -e "s/__BUILD__/$BUILD_NUMBER/" \
 	"$ROOT/Scripts/Info.plist" > "$CONTENTS/Info.plist"
+
+# Declare every shipped language in Info.plist, discovered from the same directories.
+#
+# Without CFBundleLocalizations macOS treats the app as English-only, and its own chrome — the open
+# and save panels, the standard Alert buttons, the Edit menu's system items — stays English no matter
+# what the user's language is. The list is built from Locales/ so it cannot drift from what ships.
+if [[ -d "$ROOT/Locales" ]]; then
+	/usr/libexec/PlistBuddy -c "Add :CFBundleLocalizations array" "$CONTENTS/Info.plist" >/dev/null
+	index=0
+	for dir in "$ROOT"/Locales/*/; do
+		[[ -f "$dir/strings.json" ]] || continue
+		/usr/libexec/PlistBuddy -c "Add :CFBundleLocalizations:$index string $(basename "$dir")" \
+			"$CONTENTS/Info.plist" >/dev/null
+		index=$((index + 1))
+	done
+fi
 
 # A debug build is a scratch build: its own Application Support folder, and a vault default of
 # ~/Pane-scratch rather than ~/Documents/Pane. See PaneKit/BuildProfile.swift for why — in short,

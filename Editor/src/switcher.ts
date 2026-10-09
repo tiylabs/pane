@@ -7,6 +7,7 @@
  */
 
 import { desiredOverlayHeight, pointerMotion } from "./overlay";
+import { plural, t } from "./i18n";
 
 export interface NoteSummary {
   filename: string;
@@ -166,6 +167,17 @@ export function mountSwitcher(options: SwitcherOptions) {
     );
   }
 
+  /** "Create note “query”", with the query in bold. The catalog's `{query}` slot is where it goes, so a
+   *  language that puts the name first ("“query”を作成") can say so. */
+  function createLabel(forQuery: string): string {
+    const marker = "\u0000";
+    const template = t("editor.switcher.create", { query: marker });
+    return escapeHtml(template).replace(
+      marker,
+      `<strong>“${escapeHtml(forQuery)}”</strong>`
+    );
+  }
+
   function render(notes: NoteSummary[], total: number, forQuery: string): void {
     // A `requestNotes` already in flight when Recently Deleted opened would otherwise land here and
     // replace the deleted list with the vault's — the two share one panel and one round trip.
@@ -175,7 +187,8 @@ export function mountSwitcher(options: SwitcherOptions) {
     query = forQuery;
     if (selected >= rows.length) selected = Math.max(0, rows.length - 1);
 
-    search.placeholder = total === 0 ? "Search notes…" : `Search ${total} notes…`;
+    search.placeholder =
+      total === 0 ? t("editor.switcher.search.empty") : plural("editor.switcher.search", total);
 
     // Below the grouping threshold the bands are suppressed. Swift decides by omitting `band`;
     // the attribute is a belt-and-braces so a stray header cannot render.
@@ -217,17 +230,15 @@ export function mountSwitcher(options: SwitcherOptions) {
     // what is going on, and "Search 0 deleted notes…" reads like a bug.
     search.placeholder =
       deleted.length === 0
-        ? "Recently Deleted"
-        : deleted.length === 1
-          ? "Search 1 deleted note…"
-          : `Search ${deleted.length} deleted notes…`;
+        ? t("editor.switcher.deleted.placeholder")
+        : plural("editor.switcher.deleted.search", deleted.length);
 
     if (deleted.length === 0) {
       renderNothingDeleted();
       return;
     }
     if (rows.length === 0) {
-      list.innerHTML = `<div class="switcher__noresults">No deleted notes match “${escapeHtml(query)}”</div>`;
+      list.innerHTML = `<div class="switcher__noresults">${escapeHtml(t("editor.switcher.deleted.noMatch", { query }))}</div>`;
       footer.innerHTML = "";
       footer.style.display = "none";
       return;
@@ -238,7 +249,7 @@ export function mountSwitcher(options: SwitcherOptions) {
   function renderNothingDeleted(): void {
     list.innerHTML = `
       <div class="switcher__empty">
-        <div class="switcher__empty-title">Nothing deleted</div>
+        <div class="switcher__empty-title">${escapeHtml(t("editor.switcher.deleted.empty"))}</div>
       </div>`;
     footer.innerHTML = "";
     footer.style.display = "none";
@@ -248,7 +259,7 @@ export function mountSwitcher(options: SwitcherOptions) {
   function renderEmptyVault(): void {
     list.innerHTML = `
       <div class="switcher__empty">
-        <div class="switcher__empty-title">No notes yet</div>
+        <div class="switcher__empty-title">${escapeHtml(t("editor.switcher.empty"))}</div>
       </div>`;
     footer.innerHTML = "";
     footer.style.display = "none";
@@ -258,9 +269,9 @@ export function mountSwitcher(options: SwitcherOptions) {
   /** A dead end becomes capture: ⏎ creates a note whose first line is the query. */
   function renderNoResults(): void {
     list.innerHTML = `
-      <div class="switcher__noresults">No notes match “${escapeHtml(query)}”</div>
+      <div class="switcher__noresults">${escapeHtml(t("editor.switcher.noMatch", { query }))}</div>
       <div class="switcher__create" data-create>
-        <span>Create note <strong>“${escapeHtml(query)}”</strong></span>
+        <span>${createLabel(query)}</span>
         <span class="switcher__create-spacer"></span>
         <kbd>⏎</kbd>
       </div>`;
@@ -300,9 +311,9 @@ export function mountSwitcher(options: SwitcherOptions) {
         <div class="switcher__row" role="option" data-index="${index}"
              aria-selected="${index === selected}">
           <div class="switcher__row-top">
-            <span class="switcher__title">${escapeHtml(note.title || "Untitled")}</span>
+            <span class="switcher__title">${escapeHtml(note.title || t("editor.untitled"))}</span>
             ${note.pinned ? `<span class="switcher__pin">${PIN_SVG}</span>` : ""}
-            ${note.current ? `<span class="switcher__badge">CURRENT</span>` : ""}
+            ${note.current ? `<span class="switcher__badge">${escapeHtml(t("editor.switcher.current"))}</span>` : ""}
             <span class="switcher__row-spacer"></span>
             ${
               // Pinning still means nothing to a deleted note — it would sort it to the top of a
@@ -315,14 +326,14 @@ export function mountSwitcher(options: SwitcherOptions) {
               mode === "deleted"
                 ? `<span class="switcher__actions">
               <button class="switcher__action switcher__action--danger" data-forget
-                      aria-label="Delete permanently"
-                      data-tip="Delete permanently">${TRASH_SVG}</button>
+                      aria-label="${escapeHtml(t("editor.switcher.forget"))}"
+                      data-tip="${escapeHtml(t("editor.switcher.forget"))}">${TRASH_SVG}</button>
             </span>`
                 : `<span class="switcher__actions">
               <button class="switcher__action" data-pin
-                      aria-label="Pin" data-tip="Pin ⌘⏎">${PIN_OUTLINE_SVG}</button>
+                      aria-label="${escapeHtml(t("editor.switcher.pin"))}" data-tip="${escapeHtml(t("editor.switcher.pin"))} ⌘⏎">${PIN_OUTLINE_SVG}</button>
               <button class="switcher__action" data-delete
-                      aria-label="Delete" data-tip="Delete ${options.deleteKeyCaps()}">✕</button>
+                      aria-label="${escapeHtml(t("editor.switcher.delete"))}" data-tip="${escapeHtml(t("editor.switcher.delete"))} ${options.deleteKeyCaps()}">✕</button>
             </span>`
             }
           </div>
@@ -337,12 +348,12 @@ export function mountSwitcher(options: SwitcherOptions) {
     footer.style.display = "";
     const hints =
       mode === "deleted"
-        ? `<span>${total} deleted</span><span class="switcher__footer-spacer"></span><span>↑↓ navigate</span><span>⏎ restore</span>`
+        ? `<span>${t("editor.switcher.footer.deleted", { count: total })}</span><span class="switcher__footer-spacer"></span><span>${t("editor.hint.navigate")}</span><span>${t("editor.hint.restore")}</span>`
         : query
-          ? `<span>${rows.length} of ${total} notes match</span><span class="switcher__footer-spacer"></span><span>⏎ open</span>`
+          ? `<span>${plural("editor.switcher.footer.matches", total, { shown: rows.length })}</span><span class="switcher__footer-spacer"></span><span>${t("editor.hint.open")}</span>`
           : total < 8
-            ? `<span>${total} notes</span><span class="switcher__footer-spacer"></span><span>⏎ open</span><span>⌘N new</span>`
-            : `<span>${total} notes</span><span class="switcher__footer-spacer"></span><span>↑↓ navigate</span><span>⏎ open</span><span>⌘⏎ pin</span>`;
+            ? `<span>${plural("editor.switcher.footer.count", total)}</span><span class="switcher__footer-spacer"></span><span>${t("editor.hint.open")}</span><span>${t("editor.hint.new")}</span>`
+            : `<span>${plural("editor.switcher.footer.count", total)}</span><span class="switcher__footer-spacer"></span><span>${t("editor.hint.navigate")}</span><span>${t("editor.hint.open")}</span><span>${t("editor.hint.pin")}</span>`;
     footer.innerHTML = hints;
 
     scrollSelectedIntoView();

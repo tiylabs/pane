@@ -109,7 +109,7 @@ final class SettingsForm {
     // MARK: - Controls
 
     static func label(_ text: String) -> NSTextField {
-        let field = NSTextField(labelWithString: text.isEmpty ? "" : "\(text):")
+        let field = NSTextField(labelWithString: text.isEmpty ? "" : text + tr("form.labelSuffix"))
         field.font = .systemFont(ofSize: 13)
         field.alignment = .right
         return field

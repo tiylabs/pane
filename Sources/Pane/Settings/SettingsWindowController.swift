@@ -79,7 +79,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         // window wants the toolbar to occupy its own band, which is the default.
         window.styleMask = [.titled, .closable]
         window.toolbarStyle = .preference
-        window.title = "Pane Settings"
+        window.title = tr("settings.title")
         window.isReleasedWhenClosed = false
         window.center()
 

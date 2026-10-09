@@ -45,9 +45,9 @@ final class PaneController: NSObject {
                 // (decision 25), so your text is on screen; ⌥⌘R reveals the file it is in; and the
                 // switcher lists both. A row that cannot fit the fact it is carrying is better off
                 // carrying the state instead.
-                return "This note changed elsewhere."
+                return tr("banner.conflict")
             case .downloading:
-                return "Downloading from iCloud…"
+                return tr("banner.downloading")
             case .problem(let message):
                 return message
             }
@@ -468,7 +468,7 @@ final class PaneController: NSObject {
                             filename: filename, text: text, hash: hash,
                             recordingHistory: recordingHistory)
                     } else {
-                        self.showBanner(.problem("Could not download \(filename) from iCloud."))
+                        self.showBanner(.problem(tr("error.downloadFailed", ["filename": filename])))
                     }
                 }
 
@@ -488,7 +488,7 @@ final class PaneController: NSObject {
                 if self.currentFilename == nil, !self.isDraft { self.openLastUsedNote() }
 
             case .failed(let message):
-                self.showBanner(.problem("Could not open \(filename): \(message)"))
+                self.showBanner(.problem(tr("error.openFailed", ["filename": filename, "message": message])))
             }
         }
     }
@@ -587,7 +587,7 @@ final class PaneController: NSObject {
                 self.pendingCreatedName = created.filename
                 self.open(created.filename)
             case .failure(let error):
-                self.showBanner(.problem("Could not create a note: \(error.localizedDescription)"))
+                self.showBanner(.problem(tr("error.createFailed", ["message": error.localizedDescription])))
                 self.checkVaultStillThere()
             }
         }
@@ -615,7 +615,7 @@ final class PaneController: NSObject {
                 self.isDraft = false
                 self.adoptDraft(filename: created.filename, hash: created.hash)
             case .failure(let error):
-                self.showBanner(.problem("Could not create a note: \(error.localizedDescription)"))
+                self.showBanner(.problem(tr("error.createFailed", ["message": error.localizedDescription])))
                 self.checkVaultStillThere()
             }
         }
@@ -679,9 +679,9 @@ final class PaneController: NSObject {
                 // without this the only evidence anything happened is a filename you cannot see.
                 //
                 // One word, because that is the whole of what needs saying (decision 76).
-                self.editor.call("showToast", ["Duplicated"])
+                self.editor.call("showToast", [tr("toast.duplicated")])
             case .failure(let error):
-                self.showBanner(.problem("Could not duplicate the note: \(error.localizedDescription)"))
+                self.showBanner(.problem(tr("error.duplicateFailed", ["message": error.localizedDescription])))
                 self.checkVaultStillThere()
             }
         }
@@ -726,7 +726,7 @@ final class PaneController: NSObject {
             // So the message names the place rather than just confirming: ⌃X is one keystroke away
             // from ⌘X, and the answer to hitting it by accident should be on screen, not in the
             // documentation. Floating, so it costs no height (see `.pane__toast`).
-            self.editor.call("showToast", ["Moved to Recently Deleted"])
+            self.editor.call("showToast", [tr("toast.movedToDeleted")])
 
             if filename == self.currentFilename {
                 self.currentFilename = nil
@@ -815,7 +815,7 @@ final class PaneController: NSObject {
                 }
 
             case .failed(let message):
-                self.showBanner(.problem("Could not save: \(message)"))
+                self.showBanner(.problem(tr("error.saveFailed", ["message": message])))
                 self.checkVaultStillThere()
             }
 
@@ -932,13 +932,13 @@ final class PaneController: NSObject {
         NSApp.activate(ignoringOtherApps: true)
 
         let alert = NSAlert()
-        alert.messageText = "Rename File"
+        alert.messageText = tr("rename.title")
         // The frozen half, shown so it is clear what is not on offer.
         alert.informativeText = hasTimestamp
             ? "\(prefix)…\u{2009}.\(NoteFilename.fileExtension)"
             : filename
-        alert.addButton(withTitle: "Rename")
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: tr("rename.button"))
+        alert.addButton(withTitle: tr("common.cancel"))
 
         let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 260, height: 22))
         field.stringValue = editable
@@ -976,9 +976,9 @@ final class PaneController: NSObject {
                     // The user has chosen a name. Nothing may move it again.
                     self.unsettledName = nil
                 case .declined:
-                    self.showBanner(.problem("A note is already called that."))
+                    self.showBanner(.problem(tr("error.renameTaken")))
                 case .failed(let message):
-                    self.showBanner(.problem("Could not rename: \(message)"))
+                    self.showBanner(.problem(tr("error.renameFailed", ["message": message])))
                 }
             }
         }
@@ -1110,7 +1110,7 @@ final class PaneController: NSObject {
             if case .loaded(let text, let hash) = result {
                 self.adopt(filename: filename, text: text, hash: hash, recordingHistory: false)
             } else {
-                self.showBanner(.problem("Could not download \(filename) from iCloud."))
+                self.showBanner(.problem(tr("error.downloadFailed", ["filename": filename])))
             }
         }
     }
@@ -1216,7 +1216,7 @@ final class PaneController: NSObject {
             // A toast that names the note, not a banner (decision 176): the banner is the row about
             // the note under it, and this one would sit over the next note saying it was deleted.
             // The event first, so a long title is what the ellipsis takes.
-            self.showNews(title.isEmpty ? "Deleted on another device" : "Deleted on another device: \(title)")
+            self.showNews(title.isEmpty ? tr("news.deletedElsewhere") : tr("news.deletedElsewhereTitled", ["title": title]))
             self.openLastUsedNote()
             self.refreshSwitcherIfOpen()
         }
@@ -1399,6 +1399,9 @@ final class PaneController: NSObject {
                 // a file URL with read access scoped to the bundle, and widening that scope to reach
                 // Application Support would be a much bigger hole than passing a string.
                 "themeCSS": loadThemeCSS(),
+                // The language in effect; the editor swaps its own catalog (compiled in from the
+                // same `Locales/` files) and re-renders. See `Editor/src/i18n.ts`.
+                "language": L10n.currentLanguage,
             ]]
         )
 
@@ -1434,7 +1437,7 @@ final class PaneController: NSObject {
         // find out whether it had worked was to take a screenshot. Same toast as ⌃X's, decision 50.
         editor.call(
             "showToast",
-            [hidden ? "Hidden from screen capture" : "Visible in screen capture"]
+            [hidden ? tr("toast.hiddenFromCapture") : tr("toast.visibleInCapture")]
         )
     }
 
@@ -1448,10 +1451,10 @@ final class PaneController: NSObject {
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.html]
         panel.nameFieldStringValue = MarkdownDocument.title(of: text).isEmpty
-            ? "Note.html"
+            ? "\(tr("export.defaultName")).html"
             : "\(MarkdownDocument.title(of: text)).html"
         panel.canCreateDirectories = true
-        panel.title = "Export Note"
+        panel.title = tr("export.title")
 
         // The one place other than "choose vault" (decision 27) where Pane activates on purpose:
         // a save panel behind every other window is a hang as far as the user is concerned. And
@@ -1466,7 +1469,8 @@ final class PaneController: NSObject {
             let html = MarkdownExport.html(
                 from: text,
                 title: MarkdownDocument.title(of: text),
-                accent: self.settings.value.accent
+                accent: self.settings.value.accent,
+                language: L10n.currentLanguage
             )
             try? html.data(using: .utf8)?.write(to: url, options: .atomic)
         }
@@ -1595,7 +1599,7 @@ extension PaneController: EditorWebViewDelegate {
             settings.update { $0.showOnEverySpace = now }
             // Decision 73's rule, reached by a second route: what this changes is invisible until
             // you switch Space, so without a line the key reads as having done nothing at all.
-            editor.call("showToast", [now ? "Showing on every Space" : "Keeping to this Space"])
+            editor.call("showToast", [now ? tr("toast.everySpace") : tr("toast.thisSpace")])
 
         case .toggleFooterCount:
             // Read out of the store *before* the update, never inside the closure: `settings.update`
@@ -1675,7 +1679,7 @@ extension PaneController: EditorWebViewDelegate {
 
         for level in 1...3 {
             let item = NSMenuItem(
-                title: "Heading \(level)",
+                title: tr("heading.level", ["level": String(level)]),
                 action: #selector(chooseHeading(_:)),
                 keyEquivalent: "\(level)"
             )

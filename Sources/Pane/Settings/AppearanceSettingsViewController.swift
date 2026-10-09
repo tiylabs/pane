@@ -19,7 +19,7 @@ final class AppearanceSettingsViewController: NSViewController {
     init(settings: SettingsStore) {
         self.settings = settings
         super.init(nibName: nil, bundle: nil)
-        title = "Appearance"
+        title = tr("settings.tab.appearance")
     }
 
     @available(*, unavailable)
@@ -33,18 +33,18 @@ final class AppearanceSettingsViewController: NSViewController {
 
         // ---- light / dark ------------------------------------------------------------------
         appearanceControl = NSSegmentedControl(
-            labels: ["System", "Light", "Dark"],
+            labels: [tr("appearance.system"), tr("appearance.light"), tr("appearance.dark")],
             trackingMode: .selectOne,
             target: self,
             action: #selector(appearanceChanged)
         )
         appearanceControl.selectedSegment =
             Self.appearances.firstIndex(of: current.appearance) ?? 0
-        form.row("Appearance", appearanceControl)
+        form.row(tr("appearance.appearance"), appearanceControl)
 
         // ---- accent ------------------------------------------------------------------------
         swatches = Settings.accentOptions.map { option in
-            let swatch = AccentSwatchButton(hex: option.hex, name: option.name)
+            let swatch = AccentSwatchButton(hex: option.hex, name: Settings.accentName(option.id))
             swatch.target = self
             swatch.action = #selector(accentChanged(_:))
             return swatch
@@ -52,7 +52,7 @@ final class AppearanceSettingsViewController: NSViewController {
         let swatchRow = NSStackView(views: swatches)
         swatchRow.orientation = .horizontal
         swatchRow.spacing = 8
-        form.row("Accent", swatchRow)
+        form.row(tr("appearance.accent"), swatchRow)
 
         form.separator()
 
@@ -64,7 +64,7 @@ final class AppearanceSettingsViewController: NSViewController {
         // Pane earns it: Browse Notes… and Actions… ask which, Rename File… asks for a name,
         // Export… and Choose Folder… put up a panel, and Settings… is Apple's own convention.
         let openThemes = NSButton(
-            title: "Open Themes Folder", target: self, action: #selector(openThemesFolder)
+            title: tr("appearance.theme.open"), target: self, action: #selector(openThemesFolder)
         )
         openThemes.isBordered = false
         openThemes.contentTintColor = .controlAccentColor
@@ -73,15 +73,14 @@ final class AppearanceSettingsViewController: NSViewController {
         // Dropdown, then the sentence explaining what a theme is, then the way to add one — frame
         // 3b's order, and the order the question actually arrives in.
         let themeNote = NSTextField(
-            wrappingLabelWithString:
-                "CSS files in the themes folder appear here."
+            wrappingLabelWithString: tr("appearance.theme.note")
         )
         themeNote.font = .systemFont(ofSize: 11)
         themeNote.textColor = .secondaryLabelColor
         themeNote.preferredMaxLayoutWidth = 280
         themeNote.setContentCompressionResistancePriority(.required, for: .vertical)
 
-        form.row("Markdown theme", stacked: [themePopUp, themeNote, openThemes])
+        form.row(tr("appearance.theme"), stacked: [themePopUp, themeNote, openThemes])
 
         form.separator()
 
@@ -101,18 +100,18 @@ final class AppearanceSettingsViewController: NSViewController {
         sizeField.widthAnchor.constraint(equalToConstant: 44).isActive = true
 
         let sizeRow = NSStackView(views: [
-            sizeField, stepper, SettingsForm.note("⌘= / ⌘− / ⌘0 in any pane"),
+            sizeField, stepper, SettingsForm.note(tr("appearance.textSize.hint")),
         ])
         sizeRow.orientation = .horizontal
         sizeRow.spacing = 8
-        form.row("Text size", sizeRow)
+        form.row(tr("appearance.textSize"), sizeRow)
 
         // ---- material ----------------------------------------------------------------------
         let translucent = SettingsForm.checkbox(
-            "Translucent panes", target: self, action: #selector(translucentChanged)
+            tr("appearance.translucent"), target: self, action: #selector(translucentChanged)
         )
         translucent.state = current.translucentPanes ? .on : .off
-        form.row("Material", translucent)
+        form.row(tr("appearance.material"), translucent)
 
         view = form.makeContentView()
         reloadThemes()
@@ -150,7 +149,7 @@ final class AppearanceSettingsViewController: NSViewController {
         themePopUp?.removeAllItems()
         // "Default", not "Pane Default". Every item in this window is Pane's; saying so on one of
         // them is the app naming itself inside its own settings.
-        themePopUp?.addItem(withTitle: "Default")
+        themePopUp?.addItem(withTitle: tr("appearance.theme.default"))
         for file in themeFiles {
             themePopUp?.addItem(withTitle: (file as NSString).deletingPathExtension)
         }

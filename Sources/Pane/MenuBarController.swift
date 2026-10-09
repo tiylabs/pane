@@ -30,7 +30,7 @@ final class MenuBarController: NSObject {
 
         if let button = item.button {
             button.image = Self.statusImage
-            button.toolTip = "Pane — \(hotkey.displayString)"
+            button.toolTip = tr("menubar.tooltip", ["hotkey": hotkey.displayString])
             button.target = self
             button.action = #selector(clicked)
             // Both buttons, or the action fires on the left one only and a right-click does nothing
@@ -103,7 +103,7 @@ final class MenuBarController: NSObject {
         // equivalent, and `toggle` ignores a second call within a quarter second: the combination is
         // registered globally with Carbon (decision 9), and while Pane is frontmost — which is only
         // ever the Settings window — both would fire for one press.
-        let show = NSMenuItem(title: "Show Pane", action: #selector(showPane), keyEquivalent: "")
+        let show = NSMenuItem(title: tr("menubar.show"), action: #selector(showPane), keyEquivalent: "")
         show.target = self
         if let key = hotkey.menuKeyEquivalent {
             show.keyEquivalent = key
@@ -114,16 +114,16 @@ final class MenuBarController: NSObject {
             if hotkey.modifiers.contains(.control) { mask.insert(.control) }
             show.keyEquivalentModifierMask = mask
         } else {
-            show.attributedTitle = Self.title("Show Pane", shortcut: hotkey.displayString)
+            show.attributedTitle = Self.title(tr("menubar.show"), shortcut: hotkey.displayString)
         }
         menu.addItem(show)
 
-        menu.addItem(action("New Note", key: "n", selector: #selector(newNote)))
-        menu.addItem(action("Browse Notes…", key: "p", selector: #selector(browse)))
+        menu.addItem(action(tr("menu.newNote"), key: "n", selector: #selector(newNote)))
+        menu.addItem(action(tr("menu.browseNotes"), key: "p", selector: #selector(browse)))
         // Frame 2a justifies having no ⌘ toolbar button by pointing at "the footer hint and menu
         // bar". This is the menu bar half — without it, and without the footer hint, ⌘K was a panel
         // with no way to find out it existed.
-        menu.addItem(action("Actions…", key: "k", selector: #selector(actionPanel)))
+        menu.addItem(action(tr("menubar.actions"), key: "k", selector: #selector(actionPanel)))
 
         let pinned = pinnedNotes()
         if !pinned.isEmpty {
@@ -148,16 +148,16 @@ final class MenuBarController: NSObject {
         // pane, and a sixteenth that opened a browser would be the odd one out.
         if let version = updateAvailable {
             let update = NSMenuItem(
-                title: "Update to \(version)…",
+                title: tr("menubar.update", ["version": version]),
                 action: #selector(openReleases),
                 keyEquivalent: ""
             )
             update.target = self
             menu.addItem(update)
         }
-        menu.addItem(action("Settings…", key: ",", selector: #selector(settings)))
+        menu.addItem(action(tr("menu.settings"), key: ",", selector: #selector(settings)))
 
-        let quit = NSMenuItem(title: "Quit Pane", action: #selector(quit), keyEquivalent: "q")
+        let quit = NSMenuItem(title: tr("menu.quit"), action: #selector(quit), keyEquivalent: "q")
         quit.target = self
         menu.addItem(quit)
     }
@@ -204,6 +204,7 @@ final class MenuBarController: NSObject {
         let image = NSImage(named: "MenuBar")
             ?? NSImage(systemSymbolName: "note.text", accessibilityDescription: "Pane")
         image?.isTemplate = true
+        // "Pane" is the product's name and reads the same in every language.
         image?.accessibilityDescription = "Pane"
         return image
     }()
@@ -244,7 +245,7 @@ final class MenuBarController: NSObject {
             return true
         }
         image.isTemplate = true
-        image.accessibilityDescription = "Pane — update available"
+        image.accessibilityDescription = tr("menubar.updateAvailable")
         return image
     }()
 

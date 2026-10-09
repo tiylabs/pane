@@ -24,7 +24,7 @@
              and the title simply takes what is left — which is the whole point: reserving the
              cluster's width on both sides left 20px of title at the minimum width. -->
         <div class="pane__titlebar-side">
-          <button class="pane__close" id="close" aria-label="Close pane"></button>
+          <button class="pane__close" id="close" aria-label="Close pane" data-i18n-aria="editor.tip.close"></button>
         </div>
 
         <div class="pane__title" id="pane-title"></div>
@@ -83,17 +83,17 @@
         <button class="icon-button icon-button--sm" id="format-toggle" aria-label="Formatting" title="Format ⌥⌘,">Aa</button>
       </footer>
 
-      <div class="format-bar" id="format-bar" role="toolbar" aria-label="Formatting"></div>
+      <div class="format-bar" id="format-bar" role="toolbar" aria-label="Formatting" data-i18n-aria="editor.aria.formatting"></div>
 
       <!-- ⌘F. The third state of the footer row — see the note at the top of find.ts. -->
-      <div class="find" id="find" role="search" aria-label="Find in note"></div>
+      <div class="find" id="find" role="search" aria-label="Find in note" data-i18n-aria="editor.aria.find"></div>
 
       <!-- Everything the pane holds that is not the open overlay. Covers the whole pane, takes the
            click that would otherwise land in the note behind, and closes the overlay with it. -->
       <div class="pane__scrim" id="overlay-scrim" aria-hidden="true"></div>
 
       <!-- ⌘P. Lives inside the pane; see the note at the top of switcher.css. -->
-      <div class="switcher" id="switcher" role="dialog" aria-label="Browse notes">
+      <div class="switcher" id="switcher" role="dialog" aria-label="Browse notes" data-i18n-aria="editor.aria.browse">
         <input
           class="switcher__search"
           id="switcher-search"
@@ -104,25 +104,26 @@
           spellcheck="false"
           aria-controls="switcher-list"
         />
-        <div class="switcher__list" id="switcher-list" role="listbox" aria-label="Notes"></div>
+        <div class="switcher__list" id="switcher-list" role="listbox" aria-label="Notes" data-i18n-aria="editor.aria.notes"></div>
         <div class="switcher__footer" id="switcher-footer"></div>
       </div>
 
       <!-- ⌘K. Decision 17: everything that is not pin, switcher or new lives here, which is what
            keeps the title bar at three icons forever. Built the same way as the switcher above. -->
-      <div class="actions" id="actions" role="dialog" aria-label="Actions">
+      <div class="actions" id="actions" role="dialog" aria-label="Actions" data-i18n-aria="editor.aria.actions">
         <input
           class="actions__search"
           id="actions-search"
           type="text"
           placeholder="Search actions…"
+          data-i18n-placeholder="editor.actions.placeholder"
           autocomplete="off"
           autocorrect="off"
           autocapitalize="off"
           spellcheck="false"
           aria-controls="actions-list"
         />
-        <div class="actions__list" id="actions-list" role="listbox" aria-label="Actions"></div>
+        <div class="actions__list" id="actions-list" role="listbox" aria-label="Actions" data-i18n-aria="editor.aria.actions"></div>
       </div>
     </div>
 

@@ -95,7 +95,7 @@ final class AutoSizeBadge {
             return
         }
 
-        label.stringValue = autoSizing ? "⇕  Auto-size" : "⇕  Auto-size off"
+        label.stringValue = autoSizing ? tr("badge.autoSize") : tr("badge.autoSizeOff")
         let size = CGSize(width: label.intrinsicContentSize.width + 28, height: 26)
         let origin = CGPoint(
             x: (paneFrame.midX - size.width / 2).rounded(),

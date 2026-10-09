@@ -20,10 +20,10 @@
 
 import { icon } from "./format-bar";
 import { desiredOverlayHeight, pointerMotion } from "./overlay";
+import { t } from "./i18n";
 
 export interface ActionRow {
   id: string;
-  label: string;
     svg: string;
   /**
    * What to print when the action has no rebindable binding of its own — Settings…, whose ⌘, is the
@@ -55,10 +55,9 @@ interface ActionPanelOptions {
 /** Grouped exactly as frame 2a groups them; the hairlines between groups are the grouping. */
 const GROUPS: ActionRow[][] = [
   [
-    { id: "newNote", label: "New Note", svg: `<path d="M5 12h14" /><path d="M12 5v14" />`, keys: ["⌘", "N"] },
+    { id: "newNote", svg: `<path d="M5 12h14" /><path d="M12 5v14" />`, keys: ["⌘", "N"] },
     {
       id: "duplicateNote",
-      label: "Duplicate Note",
       // Two sheets side by side, not the offset pair. This row arrived with decision 39 and took
       // its path from its neighbour, so Duplicate Note and Copy as Markdown drew the *same* icon —
       // and both are visible together every time the panel opens. The design only ever assigned
@@ -66,26 +65,23 @@ const GROUPS: ActionRow[][] = [
       svg: `<rect width="14" height="14" x="8" y="8" rx="2" ry="2" /><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />`,
       keys: ["⌘", "D"],
     },
-    { id: "browseNotes", label: "Browse Notes", svg: `<path d="M4 5h16" /><path d="M4 12h16" /><path d="M4 19h16" />`, keys: ["⌘", "P"] },
+    { id: "browseNotes", svg: `<path d="M4 5h16" /><path d="M4 12h16" /><path d="M4 19h16" />`, keys: ["⌘", "P"] },
   ],
   [
-    { id: "pinPane", label: "Pin Note", svg: `<path d="M12 17v5" /><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z" />`, keys: ["⇧", "⌘", "P"] },
+    { id: "pinPane", svg: `<path d="M12 17v5" /><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z" />`, keys: ["⇧", "⌘", "P"] },
     {
       id: "findInNote",
-      label: "Find in Note",
       svg: `<path d="m21 21-4.34-4.34" /><circle cx="11" cy="11" r="8" />`,
       keys: ["⌘", "F"],
     },
     {
       id: "copyAsMarkdown",
-      label: "Copy as Markdown",
       svg: `<rect width="8" height="4" x="8" y="2" rx="1" ry="1" /><path d="M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" /><path d="M16 4h2a2 2 0 0 1 2 2v4" /><path d="M21 14H11" /><path d="m15 10-4 4 4 4" />`,
       keys: ["⇧", "⌘", "C"],
     },
-    { id: "revealInFinder", label: "Reveal in Finder", svg: `<path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2" />`, keys: ["⌥", "⌘", "R"] },
+    { id: "revealInFinder", svg: `<path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2" />`, keys: ["⌥", "⌘", "R"] },
     {
       id: "exportNote",
-      label: "Export…",
       svg: `<path d="M12 3v12" /><path d="m17 8-5-5-5 5" /><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />`,
       keys: ["⇧", "⌘", "E"],
     },
@@ -93,21 +89,18 @@ const GROUPS: ActionRow[][] = [
   [
     {
       id: "autoSizing",
-      label: "Disable Window Auto-sizing",
       svg: `<path d="M12 2v20" /><path d="m8 18 4 4 4-4" /><path d="m8 6 4-4 4 4" />`,
       keys: ["⇧", "⌘", "/"],
     },
-    { id: "formatBar", label: "Show Format Bar", svg: `<path d="M12 4v16" /><path d="M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2" /><path d="M9 20h6" />`, keys: ["⌥", "⌘", ","] },
+    { id: "formatBar", svg: `<path d="M12 4v16" /><path d="M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2" /><path d="M9 20h6" />`, keys: ["⌥", "⌘", ","] },
     {
       id: "spaceBehaviour",
-      label: "Keep on This Space",
       // Two overlapping rectangles: one desktop behind another.
       svg: `<path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z" /><path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12" /><path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17" />`,
       keys: ["⌥", "⌘", "S"],
     },
     {
       id: "hideFromCapture",
-      label: "Hide from Screen Capture",
       svg: `<path d="M12 17v4" /><path d="M17 17H4a2 2 0 0 1-2-2V5a2 2 0 0 1 1.184-1.826" /><path d="m2 2 20 20" /><path d="M8 21h8" /><path d="M8.656 3H20a2 2 0 0 1 2 2v10a2 2 0 0 1-.293 1.042" />`,
       keys: ["⇧", "⌘", "H"],
     },
@@ -115,13 +108,11 @@ const GROUPS: ActionRow[][] = [
   [
     {
       id: "settings",
-      label: "Settings…",
       svg: `<path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915" /><circle cx="12" cy="12" r="3" />`,
       keys: ["⌘", ","],
     },
     {
       id: "recentlyDeleted",
-      label: "Recently Deleted",
       // A clock, not the trash. This row and Delete Note carried byte-identical path data, and they
       // sit four rows apart in a panel where both are on screen together — the same defect Duplicate
       // Note and Copy as Markdown had, and the smoke test's own rule that two rows never share an
@@ -134,7 +125,6 @@ const GROUPS: ActionRow[][] = [
     },
     {
       id: "renameFile",
-      label: "Rename File…",
       // A tag with a hole in it: this row is about the *file's* name, not the note's title, which is
       // line one and needs no menu item.
       svg: `<path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z" /><circle cx="7.5" cy="7.5" r=".5" fill="currentColor" />`,
@@ -146,7 +136,6 @@ const GROUPS: ActionRow[][] = [
     },
     {
       id: "deleteNote",
-      label: "Delete Note",
       svg: `<path d="M10 11v6" /><path d="M14 11v6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" /><path d="M3 6h18" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />`,
       keys: ["⌃", "X"],
       danger: true,
@@ -208,26 +197,28 @@ export function mountActionPanel(options: ActionPanelOptions) {
   /** Substring, case-insensitive. Fourteen rows do not need fuzzy matching, and fuzzy on a short
    *  fixed list mostly produces surprising matches rather than helpful ones. */
   function matches(row: ActionRow, query: string): boolean {
-    return row.label.toLowerCase().includes(query.toLowerCase().trim());
+    return labelFor(row).toLowerCase().includes(query.toLowerCase().trim());
   }
 
   function labelFor(row: ActionRow): string {
     // The two rows whose label depends on state. "Pin Note" on a pinned note would be a lie about
     // what pressing it does, and the same goes for a pane already hidden from capture — with no
     // checkmark column in this list, the label is the only place the current state can show.
-    if (row.id === "pinPane" && options.isPinned()) return "Unpin Note";
+    if (row.id === "pinPane" && options.isPinned()) return t("editor.action.pinPane.on");
     if (row.id === "hideFromCapture" && options.isHiddenFromCapture()) {
-      return "Show in Screen Capture";
+      return t("editor.action.hideFromCapture.on");
     }
     // This one matters more than the other two, because auto-sizing turns itself off when the pane
     // is dragged (decision 40). The label is the only place that silent change is ever stated.
     if (row.id === "autoSizing" && !options.isAutoSizing()) {
-      return "Enable Window Auto-sizing";
+      return t("editor.action.autoSizing.off");
     }
     if (row.id === "spaceBehaviour" && !options.isOnEverySpace()) {
-      return "Show on Every Space";
+      return t("editor.action.spaceBehaviour.off");
     }
-    return row.label;
+    // Every row's name is `editor.action.<id>` in the catalog — not a literal here, which is what
+    // lets a language be added without touching this file.
+    return t(`editor.action.${row.id}`);
   }
 
   function render(query: string): void {
@@ -258,7 +249,7 @@ export function mountActionPanel(options: ActionPanelOptions) {
     }
 
     if (visible.length === 0) {
-      html = `<div class="actions__empty">No actions match “${escapeHtml(query)}”</div>`;
+      html = `<div class="actions__empty">${escapeHtml(t("editor.actions.empty", { query }))}</div>`;
     }
     if (selected >= visible.length) selected = Math.max(0, visible.length - 1);
 

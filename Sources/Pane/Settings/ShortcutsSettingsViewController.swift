@@ -35,7 +35,7 @@ final class ShortcutsSettingsViewController: NSViewController {
     init(settings: SettingsStore) {
         self.settings = settings
         super.init(nibName: nil, bundle: nil)
-        title = "Shortcuts"
+        title = tr("settings.tab.shortcuts")
     }
 
     @available(*, unavailable)
@@ -55,7 +55,7 @@ final class ShortcutsSettingsViewController: NSViewController {
             // about which belong together.
             if action.group != group {
                 group = action.group
-                rows.addArrangedSubview(header(action.group))
+                rows.addArrangedSubview(header(Settings.groupName(action.group)))
             }
 
             let recorder = PaneShortcutRecorderView(binding: settings.value.shortcut(action.key))
@@ -63,14 +63,14 @@ final class ShortcutsSettingsViewController: NSViewController {
                 self?.settings.update { $0.shortcuts[action.key] = binding }
             }
             paneRecorders.append((action.key, recorder))
-            rows.addArrangedSubview(row(label: action.label, control: recorder))
+            rows.addArrangedSubview(row(label: Settings.label(of: action.key), control: recorder))
         }
 
         // No "click a shortcut to re-record it" caption. The rows are obviously buttons and they say
         // "Click to record" the moment one is focused; a line of prose under every screen is what
         // this window had too much of.
         let restore = SettingsForm.push(
-            "Restore Defaults", target: self, action: #selector(restoreDefaults)
+            tr("shortcuts.restore"), target: self, action: #selector(restoreDefaults)
         )
 
         let footer = NSStackView(views: [NSView(), restore])

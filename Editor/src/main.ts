@@ -67,6 +67,7 @@ import { mountSwitcher, type NoteSummary } from "./switcher";
 import { MARKDOWN_FORMAT_KEYS, mountFormatBar, setHeading, pendingWrapExtension } from "./format-bar";
 import { noteTitle } from "./note-title";
 import { countCharacters, countWords } from "./word-count";
+import { onLanguageChange, plural, setLanguage, t, translateStaticMarkup } from "./i18n";
 
 // ---------------------------------------------------------------------------------------------
 // Bridge
@@ -177,7 +178,7 @@ function showTitle(lines: Iterable<string>): void {
   // "Untitled" rather than nothing, which is what an empty note showed until ⌘N stopped writing a
   // file the moment it was pressed. A pane with no title and no text reads as broken; the reference
   // names it, and the switcher already calls a nameless note Untitled, so this is the two agreeing.
-  paneTitleEl.textContent = noteTitle(lines) || "Untitled";
+  paneTitleEl.textContent = noteTitle(lines) || t("editor.untitled");
 }
 
 /** The footer's number, and which one: a press swaps it, and it carries no bubble — a number in
@@ -185,13 +186,13 @@ function showTitle(lines: Iterable<string>): void {
 let footerCount: "words" | "characters" = "words";
 
 function formatWordCount(n: number): string {
-  return `${n} ${n === 1 ? "word" : "words"}`;
+  return plural("editor.count.words", n);
 }
 
 function renderCount(text: string): void {
   if (footerCount === "characters") {
     const n = countCharacters(text);
-    wordCountEl.textContent = `${n} ${n === 1 ? "character" : "characters"}`;
+    wordCountEl.textContent = plural("editor.count.characters", n);
   } else {
     wordCountEl.textContent = formatWordCount(countWords(text));
   }
@@ -549,6 +550,10 @@ const DEFAULT_SHORTCUTS: Record<string, string> = {
 
 const shortcutsCompartment = new Compartment();
 
+/** The empty-note prompt, in a compartment so a language switch can re-say it without rebuilding the
+ * editor. Everything else the language touches is DOM text and is re-rendered by `onLanguageChange`. */
+const placeholderCompartment = new Compartment();
+
 /** The undo history in a compartment, so it is thrown away when the note changes: undo belongs to
  * the note, or ⌘Z after a switch writes the previous note into this one's file (decision 80). */
 const historyCompartment = new Compartment();
@@ -662,7 +667,7 @@ function baseExtensions(): Extension[] {
     // An empty note said nothing at all — a caret in a blank rectangle. The reference prompts, and
     // it matters more here than it does there: ⌘N now leaves nothing on disk until the first write,
     // so an empty pane is genuinely a blank page rather than a file that already exists.
-    placeholder("Start writing…"),
+    placeholderCompartment.of(placeholder(t("editor.placeholder"))),
     // First among the input rules: a pair waiting at a line start takes the first character (148).
     pendingWrapExtension(),
     checkboxInputRule(),
@@ -817,22 +822,23 @@ mountTooltips(paneEl);
 /** The chrome's tooltips read the binding in force, re-read whenever settings arrive — decision 68's
  * rule, its fourth instance (92). */
 const CHROME_TIPS: [selector: string, label: string, action: string | null][] = [
-  ["#close", "Close", null],
-  ["#pin", "Unpin", "pinPane"],
-  ["#open-actions", "Actions", "actionPanel"],
-  ["#browse", "Notes", "browseNotes"],
-  ["#new-note", "New note", "newNote"],
-  ["#format-toggle", "Format", "formatBar"],
+  ["#close", "editor.tip.close", null],
+  ["#pin", "editor.tip.unpin", "pinPane"],
+  ["#open-actions", "editor.tip.actions", "actionPanel"],
+  ["#browse", "editor.tip.notes", "browseNotes"],
+  ["#new-note", "editor.tip.newNote", "newNote"],
+  ["#format-toggle", "editor.tip.format", "formatBar"],
   // The find bar's disclosure is the **only** place ⌥⌘F is printed anywhere in the app — it has no
   // ⌘K row (decision 72) and no Shortcuts row. If this string goes stale the key is documented
   // nowhere, which is why it is listed here rather than left as a literal beside its neighbours.
-  ["[data-disclosure]", "Replace", "findReplace"],
+  ["[data-disclosure]", "editor.tip.replace", "findReplace"],
 ];
 
 function refreshChromeTooltips(): void {
-  for (const [selector, label, action] of CHROME_TIPS) {
+  for (const [selector, labelKey, action] of CHROME_TIPS) {
     const element = document.querySelector<HTMLElement>(selector);
     if (!element) continue;
+    const label = t(labelKey);
     const binding = action ? liveShortcuts[action] ?? DEFAULT_SHORTCUTS[action] : undefined;
     describe(element, binding ? `${label} ${keyCaps(binding).join("")}` : label);
   }
@@ -1099,7 +1105,11 @@ const host = {
     themeCSS?: string;
     shortcuts?: Record<string, string>;
     footerCount?: string;
+    language?: string;
   }): void {
+    // First: the rest of this method re-renders text, and it should come out in the right language.
+    if (settings.language) setLanguage(settings.language);
+
     const root = document.documentElement;
     if (settings.appearance && settings.appearance !== "system") {
       root.setAttribute("data-appearance", settings.appearance);
@@ -1227,6 +1237,22 @@ const host = {
 };
 
 window.paneHost = host;
+
+/* A language switch re-says everything built once: the static markup, the title and footer count,
+ * the empty-note prompt, and every chrome tooltip. Open overlays render fresh each time they open,
+ * and Swift closes the Settings window — the only place the switch is made — so none of those can
+ * be on screen in the old language. The first call is the initial pass: the HTML ships English. */
+function retranslate(): void {
+  translateStaticMarkup();
+  refreshChromeTooltips();
+  view.dispatch({
+    effects: placeholderCompartment.reconfigure(placeholder(t("editor.placeholder"))),
+  });
+  showTitle(view.state.doc.iterLines());
+  renderCount(view.state.doc.toString());
+}
+onLanguageChange(retranslate);
+translateStaticMarkup();
 
 /* Hover arrives from Swift (`setHover`): the page's own `mouseenter` only fires once the pane has been
  * clicked (decisions 41, 120). The web layer owns no truth. */

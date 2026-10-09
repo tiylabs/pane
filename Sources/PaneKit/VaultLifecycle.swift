@@ -82,7 +82,15 @@ public enum VaultLifecycle {
 /// plus ⌘K → Reveal in Finder is true permanently and teaches a key on the way past.
 public enum WelcomeNote {
 
-    public static let text = """
+    /// The note in the language in effect — `Locales/<code>/welcome.md`, which is where a translator
+    /// edits it. A process with no catalogs beside it (a probe, a bare `swift run` outside the
+    /// checkout) gets `english`, so a first launch can never write an empty note.
+    public static var text: String {
+        L10n.document("welcome.md") ?? english
+    }
+
+    /// Kept in step with `Locales/en/welcome.md` by `LocalizationTests`, which compares the two.
+    public static let english = """
         # Welcome to Pane
 
         This is a note. Press **⌃⌥Space** to put Pane away. Press it again and Pane comes right back.

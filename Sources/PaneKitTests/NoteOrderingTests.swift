@@ -36,7 +36,55 @@ private func time(_ iso: String) -> String {
     NoteOrdering.relativeTime(at(iso), now: now, calendar: calendar, locale: english)
 }
 
+/// The same clock, read in another language. Only runs for languages that actually shipped, and
+/// asserts the one Chinese-specific thing a catalog cannot get wrong silently: word order. English
+/// says "May 2025"; Chinese says "2025年5月", and a template that hard-coded the English order would
+/// pass every other test in this file.
+private func runLocalizedOrderingTests() {
+    guard L10n.availableLanguages.contains(where: { $0.code == "zh-Hans" }) else { return }
+    let chinese = Locale(identifier: "zh-Hans")
+    var zhCalendar = calendar
+    zhCalendar.locale = chinese
+
+    func zhLabel(_ iso: String, pinned: Bool = false) -> String {
+        NoteOrdering.label(for: band(iso, pinned: pinned), calendar: zhCalendar, locale: chinese)
+    }
+    func zhTime(_ iso: String) -> String {
+        NoteOrdering.relativeTime(at(iso), now: now, calendar: zhCalendar, locale: chinese)
+    }
+
+    Check.suite("Switcher ordering · 简体中文") {
+        Check.test("bands are named in Chinese") {
+            Check.equal(zhLabel("2026-08-14T16:00:00Z"), "今天")
+            Check.equal(zhLabel("2026-08-13T09:00:00Z"), "昨天")
+            Check.equal(zhLabel("2026-08-11T09:00:00Z"), "本周")
+            Check.equal(zhLabel("2026-07-30T09:00:00Z", pinned: true), "已置顶")
+        }
+
+        Check.test("a month this year is the calendar's own name for it") {
+            Check.equal(zhLabel("2026-07-28T09:00:00Z"), "七月")
+        }
+
+        Check.test("an older year puts the year first, the way Chinese writes it") {
+            Check.equal(zhLabel("2025-05-12T09:00:00Z"), "2025年五月")
+        }
+
+        Check.test("relative time reads as Chinese, with the unit after the number") {
+            Check.equal(zhTime("2026-08-14T17:53:00Z"), "刚刚")
+            Check.equal(zhTime("2026-08-14T17:11:00Z"), "42分钟前")
+            Check.equal(zhTime("2026-08-14T15:30:00Z"), "2小时前")
+        }
+
+        Check.test("the weekday column is Chinese, not English") {
+            // 12 Aug 2026 is a Wednesday.
+            let text = zhTime("2026-08-12T09:00:00Z")
+            Check.expect(text.hasPrefix("周") || text.hasPrefix("星期"), "got \(text)")
+        }
+    }
+}
+
 func runNoteOrderingTests() {
+    runLocalizedOrderingTests()
     Check.suite("Switcher ordering") {
 
         Check.test("bands match the design's group headers") {

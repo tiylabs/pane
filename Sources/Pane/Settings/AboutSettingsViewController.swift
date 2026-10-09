@@ -37,7 +37,7 @@ final class AboutSettingsViewController: NSViewController {
 
     init() {
         super.init(nibName: nil, bundle: nil)
-        title = "About"
+        title = tr("settings.tab.about")
     }
 
     @available(*, unavailable)
@@ -55,12 +55,12 @@ final class AboutSettingsViewController: NSViewController {
 
         // The version and nothing else. A build number is ours rather than the reader's — it says
         // nothing they can act on, and the release it belongs to is the thing they would quote.
-        let versionLabel = NSTextField(labelWithString: "Version \(version)")
+        let versionLabel = NSTextField(labelWithString: tr("about.version", ["version": version]))
         versionLabel.font = .systemFont(ofSize: 12)
         versionLabel.textColor = .secondaryLabelColor
 
         checkButton = SettingsForm.push(
-            "Check for Updates", target: self, action: #selector(checkForUpdates)
+            tr("about.check"), target: self, action: #selector(checkForUpdates)
         )
 
         // Empty until the button is pressed, and it takes no height while it is — decision 76's
@@ -72,8 +72,8 @@ final class AboutSettingsViewController: NSViewController {
         status.alignment = .center
 
         let links = NSStackView(views: [
-            link("GitHub", to: Self.repository),
-            link("Releases", to: Self.releasesPage),
+            link(tr("about.github"), to: Self.repository),
+            link(tr("about.releases"), to: Self.releasesPage),
         ])
         links.orientation = .horizontal
         links.spacing = 18
@@ -122,7 +122,7 @@ final class AboutSettingsViewController: NSViewController {
 
     @objc private func checkForUpdates() {
         checkButton.isEnabled = false
-        status.stringValue = "Checking…"
+        status.stringValue = tr("about.checking")
 
         UpdateChecker.fetchStatus { [weak self] result in
             DispatchQueue.main.async {
@@ -135,14 +135,14 @@ final class AboutSettingsViewController: NSViewController {
                         // Named, and nothing more. Pressing "check" is a request to be told, not a
                         // request to open a browser — the Releases link below is right there, and
                         // launching one unasked is the app doing something you did not press.
-                        self.status.stringValue = "\(latest) is available"
+                        self.status.stringValue = tr("about.available", ["version": latest])
                     case .current:
-                        self.status.stringValue = "Pane is up to date"
+                        self.status.stringValue = tr("about.upToDate")
                     case .unknown:
                         // Named as what happened, not explained (decision 76). "Could not check" is
                         // the fact; whether it was DNS, a rate limit or a captive portal is not
                         // something the reader can act on differently.
-                        self.status.stringValue = "Could not check for updates"
+                        self.status.stringValue = tr("about.failed")
                     }
                 }
             }

@@ -26,6 +26,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var currentVaultURL: URL?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // First, before a single string is looked up: every menu, alert and the welcome note below
+        // reads the catalog, and `settings` is already loaded (it is a stored property).
+        Localizer.start(preference: settings.value.language)
+
         installMainMenu()
         applyDockIcon()
 
@@ -118,6 +122,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             pane?.openLastUsedNote()
         }
 
+        // Before anything below rebuilds UI, so it all comes out in the new language.
+        if Localizer.apply(preference: new.language) { languageChanged() }
+
         if hotkey?.registered != new.summonHotkey { installHotkey() }
         applyMenuShortcuts()
         applyDockIcon()
@@ -129,6 +136,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Shortening the retention should take effect now rather than at the next launch — the
         // reason someone reaches for that control is usually that they want something gone.
         vault?.purgeDeleted(keepingDays: new.recentlyDeletedDays)
+    }
+
+    /// Re-says everything that was built in the old language.
+    ///
+    /// The main menu and the status-item menu are rebuilt; the web editor is told in
+    /// `applySettings`, which the caller runs right after. A window that is already open cannot be
+    /// re-labelled in place — its controls were created with the old strings — so the Settings
+    /// window is closed and dropped, and `openSettingsWindow` makes a fresh one the next time. That
+    /// is also what lets it be reopened *immediately*: the user changed the language from inside it
+    /// and would otherwise be left looking at a window half in each.
+    private func languageChanged() {
+        installMainMenu()
+        let wasOpen = settingsWindow?.window?.isVisible == true
+        settingsWindow?.close()
+        settingsWindow = nil
+        if wasOpen { DispatchQueue.main.async { [weak self] in self?.openSettingsWindow() } }
     }
 
     /// Decision 16's window, replacing the settings *file* the menu item used to open.
@@ -222,7 +245,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 return true
             } catch {
                 presentVaultChooser(
-                    message: "Pane could not create a notes folder at \(url.path).",
+                    message: tr("vault.createFailed", ["path": url.path]),
                     detail: error.localizedDescription
                 )
                 return false
@@ -230,19 +253,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         case .vaultMissing(let missing):
             presentVaultChooser(
-                message: "Pane can't find your notes folder.",
-                detail: """
-                    It was at \(missing.path) and isn't there now. Pane won't create a new one on \
-                    top of it — that would look exactly like an empty vault whether your notes are \
-                    safe elsewhere or not. Choose where they are, or pick a new folder to start again.
-                    """
+                message: tr("vault.missing.title"),
+                detail: tr("vault.missing.detail", ["path": missing.path])
             )
             return false
 
         case .pathIsNotADirectory(let path):
             presentVaultChooser(
-                message: "Your notes folder is a file.",
-                detail: "\(path.path) exists but isn't a folder. Choose a folder for your notes."
+                message: tr("vault.notFolder.title"),
+                detail: tr("vault.notFolder.detail", ["path": path.path])
             )
             return false
         }
@@ -255,8 +274,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ) else { return }
 
         presentVaultChooser(
-            message: "Pane can't find your notes folder.",
-            detail: "It was at \(settings.value.vaultURL.path) and isn't there now."
+            message: tr("vault.missing.title"),
+            detail: tr("vault.missing.detailShort", ["path": settings.value.vaultURL.path])
         )
     }
 
@@ -273,8 +292,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         alert.messageText = message
         alert.informativeText = detail
         alert.alertStyle = .warning
-        alert.addButton(withTitle: "Choose Folder…")
-        alert.addButton(withTitle: "Quit Pane")
+        alert.addButton(withTitle: tr("vault.chooseFolder"))
+        alert.addButton(withTitle: tr("vault.quit"))
 
         guard PanePanel.steppingAside({ alert.runModal() }) == .alertFirstButtonReturn else {
             NSApp.terminate(nil)
@@ -286,8 +305,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.canChooseFiles = false
         panel.canCreateDirectories = true
         panel.allowsMultipleSelection = false
-        panel.prompt = "Use This Folder"
-        panel.message = "Choose the folder your notes live in."
+        panel.prompt = tr("folderPanel.prompt")
+        panel.message = tr("folderPanel.message")
 
         guard PanePanel.steppingAside({ panel.runModal() }) == .OK, let chosen = panel.url else {
             presentVaultChooser(message: message, detail: detail)
@@ -456,7 +475,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             state.update { $0.announcedUpdate = announced }
             return
         }
-        pane.showToast("Pane \(version) is available", dwell: PaneController.newsDwell)
+        pane.showToast(tr("update.toast", ["version": version]), dwell: PaneController.newsDwell)
     }
 
     /// Note titles by filename, kept warm for the menu bar.
@@ -508,37 +527,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let appItem = NSMenuItem()
         let appMenu = NSMenu()
         appMenu.addItem(
-            withTitle: "Settings…",
+            withTitle: tr("menu.settings"),
             action: #selector(openSettings),
             keyEquivalent: ","
         ).target = self
         appMenu.addItem(.separator())
-        appMenu.addItem(withTitle: "Quit Pane", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        appMenu.addItem(withTitle: tr("menu.quit"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         appItem.submenu = appMenu
         main.addItem(appItem)
 
         let fileItem = NSMenuItem()
-        let fileMenu = NSMenu(title: "File")
-        newNoteItem = fileMenu.addItem(withTitle: "New Note", action: #selector(newNote), keyEquivalent: "")
+        let fileMenu = NSMenu(title: tr("menu.file"))
+        newNoteItem = fileMenu.addItem(withTitle: tr("menu.newNote"), action: #selector(newNote), keyEquivalent: "")
         newNoteItem?.target = self
-        browseNotesItem = fileMenu.addItem(withTitle: "Browse Notes…", action: #selector(browseNotes), keyEquivalent: "")
+        browseNotesItem = fileMenu.addItem(withTitle: tr("menu.browseNotes"), action: #selector(browseNotes), keyEquivalent: "")
         browseNotesItem?.target = self
         applyMenuShortcuts()
         fileMenu.addItem(.separator())
-        fileMenu.addItem(withTitle: "Close Pane", action: #selector(closePane), keyEquivalent: "w").target = self
+        fileMenu.addItem(withTitle: tr("menu.closePane"), action: #selector(closePane), keyEquivalent: "w").target = self
         fileItem.submenu = fileMenu
         main.addItem(fileItem)
 
         let editItem = NSMenuItem()
-        let editMenu = NSMenu(title: "Edit")
-        editMenu.addItem(withTitle: "Undo", action: Selector(("undo:")), keyEquivalent: "z")
-        let redo = editMenu.addItem(withTitle: "Redo", action: Selector(("redo:")), keyEquivalent: "z")
+        let editMenu = NSMenu(title: tr("menu.edit"))
+        editMenu.addItem(withTitle: tr("menu.undo"), action: Selector(("undo:")), keyEquivalent: "z")
+        let redo = editMenu.addItem(withTitle: tr("menu.redo"), action: Selector(("redo:")), keyEquivalent: "z")
         redo.keyEquivalentModifierMask = [.command, .shift]
         editMenu.addItem(.separator())
-        editMenu.addItem(withTitle: "Cut", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
-        editMenu.addItem(withTitle: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
-        editMenu.addItem(withTitle: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
-        editMenu.addItem(withTitle: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+        editMenu.addItem(withTitle: tr("menu.cut"), action: #selector(NSText.cut(_:)), keyEquivalent: "x")
+        editMenu.addItem(withTitle: tr("menu.copy"), action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        editMenu.addItem(withTitle: tr("menu.paste"), action: #selector(NSText.paste(_:)), keyEquivalent: "v")
+        editMenu.addItem(withTitle: tr("menu.selectAll"), action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
         editItem.submenu = editMenu
         main.addItem(editItem)
 

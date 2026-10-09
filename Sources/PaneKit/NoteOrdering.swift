@@ -94,20 +94,29 @@ public enum NoteOrdering {
         return y == nowYear ? .month(year: y, month: m) : .olderMonth(year: y, month: m)
     }
 
+    /// - Parameter locale: decides both the wording (`Today`/`今天`) and the date formatting, so a
+    ///   caller that passes one gets one language throughout. The app passes `L10n.locale`.
     public static func label(
         for band: Band,
         calendar: Calendar = .current,
-        locale: Locale = .current
+        locale: Locale = L10n.locale
     ) -> String {
+        let language = L10n.language(for: locale)
         switch band {
-        case .pinned: return "Pinned"
-        case .today: return "Today"
-        case .yesterday: return "Yesterday"
-        case .thisWeek: return "This week"
+        case .pinned: return L10n.t("band.pinned", language: language)
+        case .today: return L10n.t("band.today", language: language)
+        case .yesterday: return L10n.t("band.yesterday", language: language)
+        case .thisWeek: return L10n.t("band.thisWeek", language: language)
         case .month(_, let m):
             return monthName(m, calendar: calendar, locale: locale)
         case .olderMonth(let y, let m):
-            return "\(monthName(m, calendar: calendar, locale: locale)) \(y)"
+            // A template rather than `"\(month) \(y)"`: English says "July 2025", Chinese says
+            // "2025年7月", and the order is the language's to decide.
+            return L10n.t(
+                "band.olderMonth",
+                ["month": monthName(m, calendar: calendar, locale: locale), "year": String(y)],
+                language: language
+            )
         }
     }
 
@@ -130,17 +139,20 @@ public enum NoteOrdering {
         _ date: Date,
         now: Date,
         calendar: Calendar = .current,
-        locale: Locale = .current
+        locale: Locale = L10n.locale
     ) -> String {
         let seconds = now.timeIntervalSince(date)
 
+        let language = L10n.language(for: locale)
         // Clock skew, or a file whose mtime a sync daemon set slightly in the future.
-        if seconds < 60 { return "now" }
+        if seconds < 60 { return L10n.t("time.now", language: language) }
 
         if calendar.isDate(date, inSameDayAs: now) {
             let minutes = Int(seconds / 60)
-            if minutes < 60 { return "\(minutes)m" }
-            return "\(minutes / 60)h"
+            if minutes < 60 {
+                return L10n.t("time.minutes", ["count": String(minutes)], language: language)
+            }
+            return L10n.t("time.hours", ["count": String(minutes / 60)], language: language)
         }
 
         if let weekAgo = calendar.date(byAdding: .day, value: -7, to: calendar.startOfDay(for: now)),

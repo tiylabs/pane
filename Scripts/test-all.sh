@@ -15,6 +15,7 @@ step "Command matrix"     Scripts/test-editor.sh --skip-editor
 step "Markdown"           Scripts/test-markdown.sh --skip-editor
 step "Switcher"           Scripts/test-switcher.sh --skip-editor
 step "Tooltip"            Scripts/test-tooltip.sh --skip-editor
+step "i18n"               Scripts/test-i18n.sh --skip-editor
 
 echo
 [[ $status -eq 0 ]] && echo "✓ every suite green" || echo "✗ at least one suite failed"

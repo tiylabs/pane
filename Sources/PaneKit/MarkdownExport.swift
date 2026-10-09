@@ -19,11 +19,19 @@ public enum MarkdownExport {
     ///
     /// A stylesheet link or a webfont would make the export depend on something the user cannot see
     /// and cannot carry with it, which is the opposite of the thing being exported.
-    public static func html(from markdown: String, title: String, accent: String) -> String {
-        let heading = title.isEmpty ? "Note" : title
+    ///
+    /// `language` goes on `<html lang>` so a browser picks the right CJK font and a screen reader the
+    /// right voice; it is the language the *note* is read in, which is the one the app was in.
+    public static func html(
+        from markdown: String,
+        title: String,
+        accent: String,
+        language: String = L10n.fallbackLanguage
+    ) -> String {
+        let heading = title.isEmpty ? L10n.t("export.defaultName", language: language) : title
         return """
         <!DOCTYPE html>
-        <html lang="en">
+        <html lang="\(escape(language))">
         <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">

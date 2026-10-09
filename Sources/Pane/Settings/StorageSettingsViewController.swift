@@ -32,7 +32,7 @@ final class StorageSettingsViewController: NSViewController {
     init(settings: SettingsStore) {
         self.settings = settings
         super.init(nibName: nil, bundle: nil)
-        title = "Storage"
+        title = tr("settings.tab.storage")
     }
 
     @available(*, unavailable)
@@ -62,25 +62,25 @@ final class StorageSettingsViewController: NSViewController {
 
         // ---- location ----------------------------------------------------------------------
         pathField = SettingsForm.pathField(current.vaultPath)
-        let change = SettingsForm.push("Change…", target: self, action: #selector(chooseFolder))
+        let change = SettingsForm.push(tr("storage.change"), target: self, action: #selector(chooseFolder))
         let folderRow = NSStackView(views: [pathField, change])
         folderRow.orientation = .horizontal
         folderRow.spacing = 8
         // Fixed rather than a minimum: the label column is 150 and the tab is 540, so a field free to
         // grow pushes Change… past the window edge and drags every other row's alignment with it.
         pathField.widthAnchor.constraint(equalToConstant: 216).isActive = true
-        form.row("Notes folder", folderRow)
+        form.row(tr("storage.notesFolder"), folderRow)
 
-        form.row("Format", SettingsForm.note("Markdown (.md)"))
+        form.row(tr("storage.format"), SettingsForm.note("Markdown (.md)"))
 
         form.separator()
 
         // ---- sync --------------------------------------------------------------------------
         offRadio = SettingsForm.radio(
-            "Off — this Mac only", target: self, action: #selector(syncChanged), tag: 0
+            tr("storage.sync.off"), target: self, action: #selector(syncChanged), tag: 0
         )
         iCloudRadio = SettingsForm.radio(
-            "iCloud Drive", target: self, action: #selector(syncChanged), tag: 1
+            tr("storage.sync.icloud"), target: self, action: #selector(syncChanged), tag: 1
         )
 
         syncNote = NSTextField(labelWithString: "")
@@ -88,24 +88,24 @@ final class StorageSettingsViewController: NSViewController {
         syncNote.textColor = .secondaryLabelColor
 
         let peer = SettingsForm.radio(
-            "Peer-to-peer     SOON", target: self, action: #selector(syncChanged), tag: 2
+            tr("storage.sync.peer"), target: self, action: #selector(syncChanged), tag: 2
         )
         peer.isEnabled = false
 
-        form.row("Sync", stacked: [offRadio, iCloudRadio, syncNote, peer])
+        form.row(tr("storage.sync"), stacked: [offRadio, iCloudRadio, syncNote, peer])
 
         form.separator()
 
         // ---- recently deleted --------------------------------------------------------------
         let retention = SettingsForm.popUp(
-            Settings.recentlyDeletedOptions.map { "Keep \($0) days" },
+            Settings.recentlyDeletedOptions.map { tr("storage.keepDays", ["days": String($0)]) },
             target: self,
             action: #selector(retentionChanged)
         )
         retention.selectItem(
             at: Settings.recentlyDeletedOptions.firstIndex(of: current.recentlyDeletedDays) ?? 1
         )
-        form.row("Recently Deleted", retention)
+        form.row(tr("storage.recentlyDeleted"), retention)
 
         view = form.makeContentView()
         refresh(current)
@@ -121,7 +121,7 @@ final class StorageSettingsViewController: NSViewController {
         offRadio?.state = iCloud ? .off : .on
         iCloudRadio?.state = iCloud ? .on : .off
         syncNote?.stringValue = iCloud
-            ? "Synced by iCloud Drive."
+            ? tr("storage.syncedNote")
             : ""
         syncNote?.isHidden = !iCloud
     }
@@ -139,8 +139,8 @@ final class StorageSettingsViewController: NSViewController {
         panel.canChooseFiles = false
         panel.canCreateDirectories = true
         panel.allowsMultipleSelection = false
-        panel.prompt = "Use This Folder"
-        panel.message = "Choose the folder your notes live in."
+        panel.prompt = tr("folderPanel.prompt")
+        panel.message = tr("folderPanel.message")
         panel.directoryURL = settings.value.vaultURL
 
         guard PanePanel.steppingAside({ panel.runModal() }) == .OK, let chosen = panel.url else { return }
@@ -165,7 +165,7 @@ final class StorageSettingsViewController: NSViewController {
         // title. What decision 30 actually requires is the source, the destination and the count,
         // and all three survive in one sentence each.
         let alert = NSAlert()
-        alert.messageText = "Move your notes to \(Self.short(destination))?"
+        alert.messageText = tr("storage.move.title", ["destination": Self.short(destination)])
         //
         // Only one of the two paths is spelled out, and it is the **source** — because that is the
         // one notes can be left behind in, and therefore the one you would have to go and find. The
@@ -173,19 +173,19 @@ final class StorageSettingsViewController: NSViewController {
         // out, `~/Library/Mobile Documents/com~apple~CloudDocs/Pane` took six of the alert's lines
         // on its own, which is most of what "too much to read" meant.
         alert.informativeText = noteCount == 0
-            ? "Pane will use \(Self.tilde(destination)) from now on."
-            : """
-                Your \(noteCount) note\(noteCount == 1 ? "" : "s") can move to \
-                \(Self.short(destination)), or stay in \(Self.tilde(source)) and leave Pane with \
-                an empty folder.
-                """
+            ? tr("storage.move.none", ["path": Self.tilde(destination)])
+            : L10n.plural(
+                "storage.move.some",
+                count: noteCount,
+                ["destination": Self.short(destination), "source": Self.tilde(source)]
+            )
         alert.alertStyle = .informational
-        if noteCount > 0 { alert.addButton(withTitle: "Move Notes") }
+        if noteCount > 0 { alert.addButton(withTitle: tr("storage.move.move")) }
         // "Just Point There" was jargon for a thing the user was not thinking about — pointing. The
         // question on screen is what happens to the *notes*, so both answers are verbs about the
         // notes and the pair reads as one choice.
-        alert.addButton(withTitle: noteCount > 0 ? "Leave Them" : "Continue")
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: noteCount > 0 ? tr("storage.move.leave") : tr("common.continue"))
+        alert.addButton(withTitle: tr("common.cancel"))
 
         let response = PanePanel.steppingAside { alert.runModal() }
         let cancel: NSApplication.ModalResponse = noteCount > 0 ? .alertThirdButtonReturn : .alertSecondButtonReturn
@@ -223,7 +223,7 @@ final class StorageSettingsViewController: NSViewController {
             }
         } catch {
             let alert = NSAlert()
-            alert.messageText = "Pane could not use that folder."
+            alert.messageText = tr("storage.useFailed")
             alert.informativeText = error.localizedDescription
             alert.alertStyle = .warning
             PanePanel.steppingAside { alert.runModal() }
@@ -260,7 +260,7 @@ final class StorageSettingsViewController: NSViewController {
     }
 
     private static func short(_ url: URL) -> String {
-        isInICloudDrive(url) ? "iCloud Drive" : url.lastPathComponent
+        isInICloudDrive(url) ? tr("storage.sync.icloud") : url.lastPathComponent
     }
 
     /// A path a person can read in a sentence. `/Users/colemei/Pane` is four words of noise before

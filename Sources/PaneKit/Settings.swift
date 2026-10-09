@@ -93,22 +93,32 @@ public struct Settings: Codable, Equatable, Sendable {
     /// where the line falls. This table is "what you might plausibly want to change", which is a
     /// different question from "what keys exist", and conflating the two is what took the tab to
     /// sixteen rows in one column.
+    ///
+    /// **`group` is a catalog key suffix, `label` is `shortcut.<key>`.** Names are looked up when the
+    /// tab is drawn (`label(of:)`, `groupName(_:)`), not stored here, so switching language
+    /// re-labels the rows instead of leaving them in the language the process started in.
     public static let shortcutActions:
-        [(key: String, label: String, standard: String, group: String)] = [
-            ("navigateBack", "Previous Note", "Mod-[", "Notes"),
-            ("navigateForward", "Next Note", "Mod-]", "Notes"),
+        [(key: String, standard: String, group: String)] = [
+            ("navigateBack", "Mod-[", "notes"),
+            ("navigateForward", "Mod-]", "notes"),
 
-            ("copyAsMarkdown", "Copy as Markdown", "Shift-Mod-c", "This note"),
-            ("revealInFinder", "Reveal in Finder", "Alt-Mod-r", "This note"),
-            ("exportNote", "Export…", "Shift-Mod-e", "This note"),
-            ("deleteNote", "Delete Note", "Ctrl-x", "This note"),
-            ("pinPane", "Pin Note", "Shift-Mod-p", "This note"),
+            ("copyAsMarkdown", "Shift-Mod-c", "note"),
+            ("revealInFinder", "Alt-Mod-r", "note"),
+            ("exportNote", "Shift-Mod-e", "note"),
+            ("deleteNote", "Ctrl-x", "note"),
+            ("pinPane", "Shift-Mod-p", "note"),
 
-            ("autoSizing", "Window Auto-sizing", "Shift-Mod-/", "The pane"),
-            ("formatBar", "Show Format Bar", "Alt-Mod-,", "The pane"),
-            ("spaceBehaviour", "Keep on This Space", "Alt-Mod-s", "The pane"),
-            ("hideFromCapture", "Hide from Screen Capture", "Shift-Mod-h", "The pane"),
+            ("autoSizing", "Shift-Mod-/", "pane"),
+            ("formatBar", "Alt-Mod-,", "pane"),
+            ("spaceBehaviour", "Alt-Mod-s", "pane"),
+            ("hideFromCapture", "Shift-Mod-h", "pane"),
         ]
+
+    /// The name a Shortcuts row shows for `key`, in the language in effect.
+    public static func label(of key: String) -> String { L10n.t("shortcut.\(key)") }
+
+    /// The heading above a group of Shortcuts rows.
+    public static func groupName(_ group: String) -> String { L10n.t("shortcutGroup.\(group)") }
 
     /// Shortcuts that exist, work, and get no recorder row.
     ///
@@ -130,19 +140,19 @@ public struct Settings: Codable, Equatable, Sendable {
     /// Fixed means *no recorder*, not *impossible*: `settings.json` can still carry any of these,
     /// because decision 32 makes the file a peer of the window rather than a fallback for it. That
     /// costs nothing now that every printed key reads the binding in force rather than a literal.
-    public static let fixedShortcuts: [(key: String, label: String, standard: String)] = [
-        ("newNote", "New Note", "Mod-n"),
-        ("duplicateNote", "Duplicate Note", "Mod-d"),
-        ("browseNotes", "Browse Notes", "Mod-p"),
-        ("findInNote", "Find in Note", "Mod-f"),
-        ("findReplace", "Find and Replace", "Alt-Mod-f"),
-        ("actionPanel", "Action Panel", "Mod-k"),
+    public static let fixedShortcuts: [(key: String, standard: String)] = [
+        ("newNote", "Mod-n"),
+        ("duplicateNote", "Mod-d"),
+        ("browseNotes", "Mod-p"),
+        ("findInNote", "Mod-f"),
+        ("findReplace", "Alt-Mod-f"),
+        ("actionPanel", "Mod-k"),
     ]
 
     /// Every shortcut Pane binds, recorder or not. What the defaults table, the ⌘K panel and the
     /// File menu all read — none of them cares which table a key came from.
-    public static var allShortcuts: [(key: String, label: String, standard: String)] {
-        shortcutActions.map { ($0.key, $0.label, $0.standard) } + fixedShortcuts
+    public static var allShortcuts: [(key: String, standard: String)] {
+        shortcutActions.map { ($0.key, $0.standard) } + fixedShortcuts
     }
 
     public static var standardShortcuts: [String: String] {
@@ -185,6 +195,16 @@ public struct Settings: Codable, Equatable, Sendable {
     /// Named here rather than as `NSEvent.ModifierFlags` so `Settings` stays free of AppKit.
     public enum Modifier: Sendable { case command, shift, option, control }
 
+    // MARK: Language
+
+    /// A language code from `Locales/` (`en`, `zh-Hans`), or `system` to follow macOS.
+    ///
+    /// A string rather than an enum, and that is the extensibility: a language is a directory under
+    /// `Locales/`, so the set of legal values is whatever shipped, not something this file lists.
+    /// An unknown value — a language removed in a later build, a typo — resolves like `system`
+    /// instead of failing the load (see `L10n.resolve`).
+    public var language: String
+
     // MARK: Launch
 
     public var launchAtLogin: Bool
@@ -210,9 +230,14 @@ public struct Settings: Codable, Equatable, Sendable {
     /// hand-typed colour in a file built to be hand-edited would be pure ceremony.
     public var accent: String
 
-    public static let accentOptions: [(name: String, hex: String)] = [
-        ("Amber", "#c98a1f"), ("Indigo", "#5b67d8"), ("Teal", "#2f9e8f"), ("Graphite", "#6e7480"),
+    /// `id` is the catalog key suffix (`accent.<id>`) and `name` the English fallback; screens call
+    /// `Settings.accentName(_:)` for the text a person reads.
+    public static let accentOptions: [(id: String, name: String, hex: String)] = [
+        ("amber", "Amber", "#c98a1f"), ("indigo", "Indigo", "#5b67d8"),
+        ("teal", "Teal", "#2f9e8f"), ("graphite", "Graphite", "#6e7480"),
     ]
+
+    public static func accentName(_ id: String) -> String { L10n.t("accent.\(id)") }
 
     /// What "recent" means in the ⌘P switcher (decision 104).
     ///
@@ -232,9 +257,9 @@ public struct Settings: Codable, Equatable, Sendable {
 
         public var label: String {
             switch self {
-            case .modified: return "Recently modified"
-            case .opened: return "Recently opened"
-            case .created: return "Date created"
+            case .modified: return L10n.t("noteOrder.modified")
+            case .opened: return L10n.t("noteOrder.opened")
+            case .created: return L10n.t("noteOrder.created")
             }
         }
     }
@@ -316,6 +341,7 @@ public struct Settings: Codable, Equatable, Sendable {
         summonHotkey: Hotkey = .defaultSummon,
         dismissMode: DismissMode = .sameHotkeyToggles,
         shortcuts: [String: String] = Settings.standardShortcuts,
+        language: String = L10n.systemPreference,
         launchAtLogin: Bool = false,
         showMenuBarIcon: Bool = true,
         showDockIcon: Bool = false,
@@ -336,6 +362,7 @@ public struct Settings: Codable, Equatable, Sendable {
         self.summonHotkey = summonHotkey
         self.dismissMode = dismissMode
         self.shortcuts = shortcuts
+        self.language = language
         self.launchAtLogin = launchAtLogin
         self.showMenuBarIcon = showMenuBarIcon
         self.showDockIcon = showDockIcon
@@ -369,6 +396,7 @@ public struct Settings: Codable, Equatable, Sendable {
         shortcuts = Settings.standardShortcuts.merging(
             try c.decodeIfPresent([String: String].self, forKey: .shortcuts) ?? [:]
         ) { _, fromFile in fromFile }
+        language = try c.decodeIfPresent(String.self, forKey: .language) ?? d.language
         launchAtLogin = try c.decodeIfPresent(Bool.self, forKey: .launchAtLogin) ?? d.launchAtLogin
         showMenuBarIcon = try c.decodeIfPresent(Bool.self, forKey: .showMenuBarIcon) ?? d.showMenuBarIcon
         showDockIcon = try c.decodeIfPresent(Bool.self, forKey: .showDockIcon) ?? d.showDockIcon

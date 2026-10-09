@@ -215,7 +215,7 @@ public final class NoteIndex {
         order: Settings.NoteOrder = .modified,
         now: Date = Date(),
         calendar: Calendar = .current,
-        locale: Locale = .current
+        locale: Locale = L10n.locale
     ) -> [SwitcherRow] {
         let trimmed = query.trimmingCharacters(in: .whitespaces)
 

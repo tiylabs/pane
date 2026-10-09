@@ -16,11 +16,18 @@ final class GeneralSettingsViewController: NSViewController {
     private let settings: SettingsStore
     private var recorder: HotkeyRecorderView!
     private var noteOrder: NSPopUpButton!
+    private var languagePopUp: NSPopUpButton!
+
+    /// "System default" first, then every language found in `Locales/`, each in its own script.
+    /// Built from `L10n.availableLanguages`, so a new language directory appears here with no edit.
+    private var languageChoices: [String] {
+        [L10n.systemPreference] + L10n.availableLanguages.map(\.code)
+    }
 
     init(settings: SettingsStore) {
         self.settings = settings
         super.init(nibName: nil, bundle: nil)
-        title = "General"
+        title = tr("settings.tab.general")
     }
 
     @available(*, unavailable)
@@ -30,6 +37,20 @@ final class GeneralSettingsViewController: NSViewController {
         let form = SettingsForm(labelWidth: 170)
         let current = settings.value
 
+        // ---- language ----------------------------------------------------------------------
+        // First, and above the rest: it is the row you most need to be able to find when the
+        // window is in a language you cannot read. Language names are never translated — each is
+        // written in its own script for exactly that reason.
+        languagePopUp = SettingsForm.popUp(
+            [tr("general.language.system")] + L10n.availableLanguages.map(\.name),
+            target: self,
+            action: #selector(languageChanged)
+        )
+        languagePopUp.selectItem(at: languageChoices.firstIndex(of: current.language) ?? 0)
+        form.row(tr("general.language"), languagePopUp)
+
+        form.separator()
+
         // ---- summon ------------------------------------------------------------------------
         recorder = HotkeyRecorderView(hotkey: current.summonHotkey)
         recorder.onRecord = { [weak self] hotkey in
@@ -38,29 +59,29 @@ final class GeneralSettingsViewController: NSViewController {
         let recorderRow = NSStackView(views: [recorder])
         recorderRow.orientation = .horizontal
         recorderRow.spacing = 8
-        form.row("Summon hotkey", recorderRow)
+        form.row(tr("general.summonHotkey"), recorderRow)
 
         // ---- dismiss -----------------------------------------------------------------------
         let toggles = SettingsForm.radio(
-            "Same hotkey toggles", target: self, action: #selector(dismissModeChanged), tag: 0
+            tr("general.dismiss.toggle"), target: self, action: #selector(dismissModeChanged), tag: 0
         )
         let escOnly = SettingsForm.radio(
-            "Esc only", target: self, action: #selector(dismissModeChanged), tag: 1
+            tr("general.dismiss.escape"), target: self, action: #selector(dismissModeChanged), tag: 1
         )
         (current.dismissMode == .sameHotkeyToggles ? toggles : escOnly).state = .on
-        form.row("Dismiss", stacked: [toggles, escOnly])
+        form.row(tr("general.dismiss"), stacked: [toggles, escOnly])
 
         form.separator()
 
         // ---- launch ------------------------------------------------------------------------
         let login = SettingsForm.checkbox(
-            "Start Pane at login", target: self, action: #selector(launchAtLoginChanged)
+            tr("general.startAtLogin"), target: self, action: #selector(launchAtLoginChanged)
         )
         login.state = current.launchAtLogin ? .on : .off
-        form.row("Launch", login)
+        form.row(tr("general.launch"), login)
 
         let menuBar = SettingsForm.checkbox(
-            "Show menu bar icon", target: self, action: #selector(showMenuBarIconChanged)
+            tr("general.showMenuBarIcon"), target: self, action: #selector(showMenuBarIconChanged)
         )
         menuBar.state = current.showMenuBarIcon ? .on : .off
         form.row("", menuBar)
@@ -79,14 +100,14 @@ final class GeneralSettingsViewController: NSViewController {
             Settings.NoteOrder.allCases.map(\.label), target: self, action: #selector(noteOrderChanged)
         )
         noteOrder.selectItem(at: Settings.NoteOrder.allCases.firstIndex(of: current.noteOrder) ?? 0)
-        form.row("Sort notes", noteOrder)
+        form.row(tr("general.sortNotes"), noteOrder)
 
         // ---- dock --------------------------------------------------------------------------
         let dock = SettingsForm.checkbox(
-            "Show Dock icon", target: self, action: #selector(showDockIconChanged)
+            tr("general.showDockIcon"), target: self, action: #selector(showDockIconChanged)
         )
         dock.state = current.showDockIcon ? .on : .off
-        form.row("Dock", dock)
+        form.row(tr("general.dock"), dock)
 
         // ---- updates -----------------------------------------------------------------------
         // The switch on the **network call**, not on the notice — which is why it is a row at all.
@@ -95,12 +116,18 @@ final class GeneralSettingsViewController: NSViewController {
         // talks to the network (decisions 94, 136). Somebody who wants an app that makes no
         // requests should be able to have one without editing JSON.
         let updates = SettingsForm.checkbox(
-            "Check for updates", target: self, action: #selector(checkForUpdatesChanged)
+            tr("general.checkUpdates"), target: self, action: #selector(checkForUpdatesChanged)
         )
         updates.state = current.checkForUpdates ? .on : .off
-        form.row("Updates", updates)
+        form.row(tr("general.updates"), updates)
 
         view = form.makeContentView()
+    }
+
+    @objc private func languageChanged(_ sender: NSPopUpButton) {
+        let choices = languageChoices
+        guard sender.indexOfSelectedItem >= 0, sender.indexOfSelectedItem < choices.count else { return }
+        settings.update { $0.language = choices[sender.indexOfSelectedItem] }
     }
 
     @objc private func noteOrderChanged(_ sender: NSPopUpButton) {
@@ -113,6 +140,9 @@ final class GeneralSettingsViewController: NSViewController {
     /// `settings.json` while this window is open, or Restore Defaults on the Shortcuts tab.
     func settingsChanged(_ new: Settings) {
         recorder?.setHotkey(new.summonHotkey)
+        if let index = languageChoices.firstIndex(of: new.language) {
+            languagePopUp?.selectItem(at: index)
+        }
         if let index = Settings.NoteOrder.allCases.firstIndex(of: new.noteOrder) {
             noteOrder?.selectItem(at: index)
         }

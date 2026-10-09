@@ -15,6 +15,7 @@
  */
 
 import { describe } from "./tooltip";
+import { onLanguageChange, t } from "./i18n";
 import { Decoration, EditorView, type DecorationSet } from "@codemirror/view";
 import { EditorSelection, StateEffect, StateField, type Extension } from "@codemirror/state";
 
@@ -117,8 +118,7 @@ export function mountFind(options: FindOptions) {
         <path d="M6 2a4 4 0 110 8 4 4 0 010-8zM9.2 9.2l3.3 3.3" fill="none" stroke="currentColor"
               stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
-      <input class="find__input" type="text" placeholder="Find in note…" spellcheck="false"
-             aria-label="Find in note">
+      <input class="find__input" type="text" spellcheck="false">
       <span class="find__count" aria-live="polite"></span>
       <button class="find__step" data-prev>↑</button>
       <button class="find__step" data-next>↓</button>
@@ -126,8 +126,7 @@ export function mountFind(options: FindOptions) {
     </div>
     <div class="find__row find__row--replace">
       <span class="find__replace-lead" aria-hidden="true"></span>
-      <input class="find__input" type="text" placeholder="Replace" spellcheck="false"
-             aria-label="Replace with" data-replace-input>
+      <input class="find__input" type="text" spellcheck="false" data-replace-input>
       <button class="find__step" data-replace-one>
         <svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true">
           <path d="M3 5.5h5.5a2.25 2.25 0 1 1 0 4.5H5.5M5.5 3L3 5.5 5.5 8" fill="none"
@@ -149,16 +148,25 @@ export function mountFind(options: FindOptions) {
   // occupies (decision 38), so having the two answer differently — one instantly in the pane's
   // material, one a second later in the system's yellow — was the inconsistency decision 58 set
   // out to remove, sitting in the one place it is most obvious.
-  describe(root.querySelector<HTMLElement>("[data-prev]")!, "Previous ⇧⏎");
-  describe(root.querySelector<HTMLElement>("[data-next]")!, "Next ⏎");
-  describe(root.querySelector<HTMLElement>(".find__close")!, "Close ⎋");
-  // Not this one — its key is rebindable through `settings.json`, so it is set from the binding in
-  // force by `refreshChromeTooltips` in main.ts. The four around it are keys nothing can rebind.
-  describe(root.querySelector<HTMLElement>("[data-replace-one]")!, "Replace ⏎");
-  describe(root.querySelector<HTMLElement>("[data-replace-all]")!, "Replace all ⌘⏎");
-
   const input = root.querySelector<HTMLInputElement>(".find__input")!;
   const replaceInput = root.querySelector<HTMLInputElement>("[data-replace-input]")!;
+
+  /** Every string this bar says, in one place so a language switch can say them all again. */
+  function label(): void {
+    input.placeholder = t("editor.find.placeholder");
+    input.setAttribute("aria-label", t("editor.aria.find"));
+    replaceInput.placeholder = t("editor.find.replacePlaceholder");
+    replaceInput.setAttribute("aria-label", t("editor.find.replaceWith"));
+    describe(root.querySelector<HTMLElement>("[data-prev]")!, `${t("editor.find.previous")} ⇧⏎`);
+    describe(root.querySelector<HTMLElement>("[data-next]")!, `${t("editor.find.next")} ⏎`);
+    describe(root.querySelector<HTMLElement>(".find__close")!, `${t("editor.find.close")} ⎋`);
+    // Not the disclosure — its key is rebindable through `settings.json`, so it is set from the
+    // binding in force by `refreshChromeTooltips` in main.ts. The ones here are keys nothing can rebind.
+    describe(root.querySelector<HTMLElement>("[data-replace-one]")!, `${t("editor.find.replaceOne")} ⏎`);
+    describe(root.querySelector<HTMLElement>("[data-replace-all]")!, `${t("editor.find.replaceAll")} ⌘⏎`);
+  }
+  label();
+  onLanguageChange(label);
   const disclosure = root.querySelector<HTMLElement>("[data-disclosure]")!;
   const count = root.querySelector<HTMLElement>(".find__count")!;
 
@@ -248,7 +256,8 @@ export function mountFind(options: FindOptions) {
       root.removeAttribute("data-empty");
       return;
     }
-    count.textContent = total === 0 ? "no matches" : `${current + 1} of ${total}`;
+    count.textContent =
+      total === 0 ? t("editor.find.noMatches") : t("editor.find.count", { current: current + 1, total });
     root.toggleAttribute("data-empty", total === 0);
   }
 
