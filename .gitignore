@@ -74,3 +74,6 @@ AGENTS.md
 # Claude Code's own session state — a checkpoint file and a local output-style preference.
 # Neither is a project file.
 .claude/
+
+# Pi Agent's session state
+.pi/tasks/
