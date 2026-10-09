@@ -4,6 +4,9 @@ on:
   push:
     tags:
       - "v*"
+  # The draft is published by hand after review; that is the moment the Homebrew cask is bumped.
+  release:
+    types: [released]
 
 # The tag is the trigger, and the smoke test is the gate before it — see the release process in
 # CLAUDE.md. Nothing here replaces running the real app by hand first; this exists so the artifact
@@ -13,6 +16,7 @@ permissions:
 
 jobs:
   release:
+    if: github.event_name == 'push'
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v5
@@ -50,22 +54,86 @@ jobs:
         id: version
         run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
-      - name: Build Pane.app (universal)
+      # The certificate lives in a throwaway keychain that exists only for this job. Everything
+      # below fails closed: a release that cannot be signed must not fall back to the ad-hoc
+      # signature and ship, which is what an unset PANE_SIGN_IDENTITY would otherwise do.
+      - name: Import the Developer ID certificate
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+        run: |
+          set -euo pipefail
+          for v in APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_TEAM_ID APPLE_ID APPLE_APP_SPECIFIC_PASSWORD; do
+            if [ -z "${!v:-}" ]; then
+              echo "::error::Missing secret $v — signing and notarization need all five."
+              exit 1
+            fi
+          done
+
+          CERT_PATH="$RUNNER_TEMP/signing-certificate.p12"
+          KEYCHAIN_PATH="$RUNNER_TEMP/pane-signing.keychain-db"
+          KEYCHAIN_PASSWORD="$(uuidgen)"
+          echo "::add-mask::$KEYCHAIN_PASSWORD"
+
+          echo "$APPLE_CERTIFICATE" | base64 --decode > "$CERT_PATH"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          # -T rather than -A: only codesign and security may use the key, not every program.
+          security import "$CERT_PATH" -P "$APPLE_CERTIFICATE_PASSWORD" -f pkcs12 \
+            -T /usr/bin/codesign -T /usr/bin/security -k "$KEYCHAIN_PATH"
+          rm -f "$CERT_PATH"
+          security list-keychains -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | sed 's/"//g')
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH" >/dev/null
+
+          IDENTITY="$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" \
+            | grep 'Developer ID Application:' | grep -F "($APPLE_TEAM_ID)" | head -n 1 \
+            | awk -F '"' '{print $2}' || true)"
+          if [ -z "$IDENTITY" ]; then
+            echo "::error::No 'Developer ID Application' identity for team $APPLE_TEAM_ID in the imported certificate."
+            exit 1
+          fi
+          echo "Signing identity: $IDENTITY"
+          echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> "$GITHUB_ENV"
+          echo "PANE_SIGN_IDENTITY=$IDENTITY" >> "$GITHUB_ENV"
+
+      - name: Build Pane.app (universal, Developer ID signed)
         env:
           PANE_VERSION: ${{ steps.version.outputs.version }}
         run: Scripts/build-app.sh --universal
 
+      # Notarize the app before it goes into the image, so the ticket is stapled to the bundle the
+      # user drags out and it opens offline. The image is notarized again below.
+      - name: Notarize Pane.app
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: Scripts/notarize.sh build/Pane.app
+
       - name: Package
         id: package
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           set -euo pipefail
           Scripts/make-dmg.sh
           NAME="Pane-${{ steps.version.outputs.version }}.dmg"
           test -f "build/$NAME"
+          codesign --force --timestamp --sign "$PANE_SIGN_IDENTITY" "build/$NAME"
+          codesign --verify --verbose=2 "build/$NAME"
+          Scripts/notarize.sh "build/$NAME"
           echo "name=$NAME" >> "$GITHUB_OUTPUT"
           echo "sha256=$(shasum -a 256 "build/$NAME" | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
 
       - name: Verify the packaged app
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           set -euo pipefail
           # Verify what people actually download — the app as it sits on the mounted image, not the
@@ -75,6 +143,20 @@ jobs:
           trap 'hdiutil detach /tmp/verify -quiet || true' EXIT
 
           codesign --verify --deep --strict /tmp/verify/Pane.app
+          # Signed by a Developer ID with the hardened runtime — not the ad-hoc fallback, which
+          # passes `--verify` just as happily.
+          SIGINFO="$(codesign -dvv /tmp/verify/Pane.app 2>&1)"
+          echo "$SIGINFO"
+          grep -q "Authority=Developer ID Application" <<<"$SIGINFO"
+          grep -q "TeamIdentifier=$APPLE_TEAM_ID" <<<"$SIGINFO"
+          grep -Eq "flags=0x[0-9a-f]+\(.*runtime" <<<"$SIGINFO"
+          test "$(plutil -extract CFBundleIdentifier raw /tmp/verify/Pane.app/Contents/Info.plist)" = "com.tiylabs.pane"
+          # What Gatekeeper itself says, for the app and for the image, and that the ticket is
+          # stapled so the first launch does not need the network.
+          xcrun stapler validate /tmp/verify/Pane.app
+          spctl --assess --type execute --verbose=4 /tmp/verify/Pane.app
+          xcrun stapler validate "build/${{ steps.package.outputs.name }}"
+          spctl --assess --type open --context context:primary-signature --verbose=4 "build/${{ steps.package.outputs.name }}"
           # Universal, or the release silently drops every Intel Mac.
           lipo -archs /tmp/verify/Pane.app/Contents/MacOS/Pane | tee /dev/stderr | grep -q "x86_64"
           lipo -archs /tmp/verify/Pane.app/Contents/MacOS/Pane | grep -q "arm64"
@@ -109,5 +191,67 @@ jobs:
             echo "sha256: ${{ steps.package.outputs.sha256 }}"
             echo '```'
             echo
-            echo "Next: bump \`Casks/pane.rb\` in \`ColeMei/homebrew-pane\` with that url and sha256."
+            echo "Signed with Developer ID and notarized. Publishing the draft bumps"
+            echo "\`Casks/pane.rb\` in \`tiylabs/homebrew-tap\` automatically."
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove the signing keychain
+        if: always()
+        run: |
+          if [ -n "${KEYCHAIN_PATH:-}" ]; then
+            security delete-keychain "$KEYCHAIN_PATH" || true
+          fi
+          rm -f "$RUNNER_TEMP/signing-certificate.p12"
+
+  # Runs when the draft is published, from the asset people actually download, so the sha256 in the
+  # cask is the one of the published bytes.
+  update-homebrew:
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Resolve the version and the image checksum
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          VERSION="${TAG#v}"
+          DMG="Pane-${VERSION}.dmg"
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern "$DMG" --dir .
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "SHA256=$(sha256sum "$DMG" | awk '{print $1}')" >> "$GITHUB_ENV"
+
+      - name: Render the cask
+        run: |
+          set -euo pipefail
+          sed -E \
+            -e "s/^(  version )\".*\"/\1\"$VERSION\"/" \
+            -e "s/^(  sha256 )\".*\"/\1\"$SHA256\"/" \
+            packaging/pane.rb > pane.rb
+          grep -q "version \"$VERSION\"" pane.rb
+          grep -q "sha256 \"$SHA256\"" pane.rb
+
+      - name: Push to tiylabs/homebrew-tap
+        env:
+          PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "$PAT_TOKEN" ]; then
+            echo "::error::Missing secret PAT_TOKEN (needs write access to tiylabs/homebrew-tap)."
+            exit 1
+          fi
+          git clone --depth 1 "https://x-access-token:${PAT_TOKEN}@github.com/tiylabs/homebrew-tap.git" tap
+          mkdir -p tap/Casks
+          cp pane.rb tap/Casks/pane.rb
+          cd tap
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Casks/pane.rb
+          if git diff --cached --quiet; then
+            echo "Cask already up to date."
+            exit 0
+          fi
+          git commit -m "Update Pane to $VERSION"
+          git push

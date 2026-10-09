@@ -4,13 +4,17 @@
 #
 # There is no Xcode project on purpose — `swift build` works with only the Command Line Tools, so
 # this script is the whole build. It compiles the editor bundle, compiles the Swift binary, lays out
-# the bundle, and ad-hoc signs it (arm64 binaries must carry at least an ad-hoc signature to launch,
-# and rewriting the bundle invalidates the signature SwiftPM applied).
+# the bundle, and signs it — with a Developer ID when PANE_SIGN_IDENTITY is set (the release
+# workflow), ad-hoc otherwise (arm64 binaries must carry at least an ad-hoc signature to launch, and
+# rewriting the bundle invalidates the signature SwiftPM applied).
 #
 #   Scripts/build-app.sh                 release build for the host architecture
 #   Scripts/build-app.sh --debug         debug build, faster, for iterating
 #   Scripts/build-app.sh --universal     arm64 + x86_64, for a release artifact
 #   Scripts/build-app.sh --skip-editor   reuse the existing Editor/dist
+#
+#   PANE_SIGN_IDENTITY="Developer ID Application: ..." Scripts/build-app.sh --universal
+#                                        hardened-runtime Developer ID signature, for release
 #
 set -euo pipefail
 
@@ -27,7 +31,7 @@ while [[ $# -gt 0 ]]; do
 		--release)     CONFIG=release ;;
 		--universal)   ARCH_ARGS=(--arch arm64 --arch x86_64) ;;
 		--skip-editor) SKIP_EDITOR=1 ;;
-		-h|--help)     sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+		-h|--help)     sed -n '2,23p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
 		*)             echo "unknown flag: $1" >&2; exit 2 ;;
 	esac
 	shift
@@ -113,10 +117,21 @@ if [[ -f "$ROOT/Scripts/AppIcon.icns" ]]; then
 fi
 
 # ---- 4. signature -----------------------------------------------------------------------------
-# Ad-hoc only. Pane ships unsigned by design (no Developer ID), which is documented in the README —
-# but an arm64 Mach-O with no signature at all will not launch, so this is not optional.
-say "Ad-hoc signing"
-codesign --force --sign - --timestamp=none "$APP"
+# Two modes, chosen by PANE_SIGN_IDENTITY:
+#
+#   unset — ad-hoc. Local and CI builds. An arm64 Mach-O with no signature at all will not launch, so
+#           this is not optional, but it carries no identity and Gatekeeper will not accept it.
+#   set   — Developer ID with the hardened runtime and a secure timestamp, which is what notarization
+#           requires. No --deep: the bundle holds exactly one executable and no nested code, and
+#           Apple deprecates --deep for signing. No entitlements file either — WKWebView, Carbon
+#           hotkeys and SMAppService need none under the hardened runtime.
+if [[ -n "${PANE_SIGN_IDENTITY:-}" ]]; then
+	say "Signing with Developer ID: $PANE_SIGN_IDENTITY"
+	codesign --force --options runtime --timestamp --sign "$PANE_SIGN_IDENTITY" "$APP"
+else
+	say "Ad-hoc signing"
+	codesign --force --sign - --timestamp=none "$APP"
+fi
 codesign --verify --deep --strict "$APP"
 
 say "Built $APP ($VERSION build $BUILD_NUMBER)"

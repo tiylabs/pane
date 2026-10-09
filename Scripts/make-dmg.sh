@@ -5,8 +5,8 @@
 # The disk image is what a person downloads; the Homebrew cask reads the same file. It exists
 # because a .zip leaves Pane.app sitting in ~/Downloads and every instruction Pane prints says
 # /Applications — a window with an Applications alias in it makes the move obvious instead of
-# assumed. It does nothing about Gatekeeper: Pane is unsigned either way, and the quarantine flag
-# still has to be cleared once. See the README.
+# assumed. It does not sign the image: signing and notarizing happen in the release workflow, after
+# this script, because the image has to exist before it can be signed.
 #
 #   Scripts/make-dmg.sh                      packages build/Pane.app
 #   Scripts/make-dmg.sh path/to/Pane.app     packages that bundle instead
@@ -38,9 +38,9 @@ fi
 say "Staging"
 rm -rf "$STAGE" "$DMG"
 mkdir -p "$STAGE"
-# ditto, not cp -R: it preserves the extended attributes and the ad-hoc signature. A bundle copied
-# with cp -R fails `codesign --verify` on the other end, which on an already-unsigned app reads to
-# the user as a corrupt download.
+# ditto, not cp -R: it preserves the extended attributes, the signature and the stapled notarization
+# ticket. A bundle copied with cp -R fails `codesign --verify` on the other end, which reads to the
+# user as a corrupt download.
 ditto "$APP" "$STAGE/Pane.app"
 ln -s /Applications "$STAGE/Applications"
 
