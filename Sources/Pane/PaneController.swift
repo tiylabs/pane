@@ -1369,7 +1369,7 @@ final class PaneController: NSObject {
     // MARK: - Settings
 
     func applySettings() {
-        editor.isTranslucent = settings.value.translucentPanes
+        editor.panelOpacity = settings.value.panelOpacity
         panel.showsOnEverySpace = settings.value.showOnEverySpace
         applyHiddenFromCapture()
         // Not a setting — pane state — but this runs on `ready`, which is the one moment the web
@@ -1390,7 +1390,7 @@ final class PaneController: NSObject {
                 "accentDark": accent.dark,
                 "textSize": settings.value.textSize,
                 "footerCount": settings.value.footerCount.rawValue,
-                "translucent": settings.value.translucentPanes,
+                "panelOpacity": settings.value.panelOpacity,
                 "shortcuts": settings.value.shortcuts,
                 // Decision 19: a theme is a CSS file, so what crosses the bridge is the file's
                 // contents. Read here rather than fetched by the web layer — the page is loaded from

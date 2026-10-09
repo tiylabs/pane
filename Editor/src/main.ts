@@ -1102,7 +1102,7 @@ const host = {
     accent?: string;
     accentDark?: string;
     textSize?: number;
-    translucent?: boolean;
+    panelOpacity?: number;
     themeCSS?: string;
     shortcuts?: Record<string, string>;
     footerCount?: string;
@@ -1117,7 +1117,14 @@ const host = {
     } else {
       root.removeAttribute("data-appearance");
     }
-    root.setAttribute("data-vibrancy", settings.translucent === false ? "off" : "on");
+    if (settings.panelOpacity !== undefined) {
+      const opacity = Math.min(1, Math.max(0, settings.panelOpacity));
+      root.setAttribute("data-vibrancy", opacity < 1 ? "on" : "off");
+      root.style.setProperty("--panel-opacity", String(opacity));
+      // Preserve the original dark scrim (60% at the default 70% light opacity),
+      // while both themes reach fully transparent and fully opaque at the endpoints.
+      root.style.setProperty("--panel-opacity-dark", String(Math.max(0, opacity - (1 - opacity) / 3)));
+    }
     if (settings.textSize) root.style.setProperty("--text-size", `${settings.textSize}px`);
     if (settings.accent) {
       root.style.setProperty("--accent-light", settings.accent);

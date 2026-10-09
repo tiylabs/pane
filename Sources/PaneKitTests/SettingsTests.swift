@@ -103,6 +103,39 @@ func runSettingsTests() {
         }
     }
 
+    Check.suite("Panel opacity setting") {
+        func decode(_ json: String) -> Settings? {
+            try? JSONDecoder().decode(Settings.self, from: Data(json.utf8))
+        }
+
+        Check.test("old translucency choices retain their appearance") {
+            Check.equal(decode("{}")?.panelOpacity, Settings.defaultPanelOpacity)
+            Check.equal(decode(#"{"translucentPanes":true}"#)?.panelOpacity, Settings.defaultPanelOpacity)
+            Check.equal(decode(#"{"translucentPanes":false}"#)?.panelOpacity, 1)
+        }
+
+        Check.test("opacity takes precedence over the old switch") {
+            Check.equal(decode(#"{"translucentPanes":false,"panelOpacity":0.4}"#)?.panelOpacity, 0.4)
+        }
+
+        Check.test("clamps hand-edited opacity without losing other settings") {
+            Check.equal(decode(#"{"panelOpacity":-1,"textSize":21}"#)?.panelOpacity, 0)
+            let high = decode(#"{"panelOpacity":2,"textSize":21}"#)
+            Check.equal(high?.panelOpacity, 1)
+            Check.equal(high?.textSize, 21)
+        }
+
+        Check.test("transparency survives saving and reopening at both ends and in between") {
+            for opacity in [0.0, 0.25, Settings.defaultPanelOpacity, 1.0] {
+                let settings = Settings(panelOpacity: opacity)
+                let data = try! JSONEncoder().encode(settings)
+                Check.equal(try! JSONDecoder().decode(Settings.self, from: data).panelOpacity, opacity)
+                let file = try! JSONSerialization.jsonObject(with: data) as! [String: Any]
+                Check.expect(file["translucentPanes"] == nil, "save only the new setting")
+            }
+        }
+    }
+
     Check.suite("Footer count setting") {
 
         func decode(_ json: String) -> Settings? {

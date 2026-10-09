@@ -316,9 +316,16 @@ public struct Settings: Codable, Equatable, Sendable {
     /// The only legal range, named once so the keyboard and a hand-edited file agree.
     public static let textSizeRange: ClosedRange<Double> = 10...32
 
-    /// Translucent panes. Turning this off swaps the vibrancy material for a flat background —
-    /// the design's own props block does exactly this.
-    public var translucentPanes: Bool
+    /// Background opacity only; note text and controls stay fully opaque.
+    /// 0 is transparent, 1 is opaque. The Settings slider presents the inverse as transparency.
+    public var panelOpacity: Double
+
+    public static let panelOpacityRange: ClosedRange<Double> = 0...1
+    public static let defaultPanelOpacity: Double = 0.7
+
+    private enum LegacyCodingKeys: String, CodingKey {
+        case translucentPanes
+    }
 
     /// Frame 2a's "Hide While Screen Sharing", as `NSWindow.sharingType` (decision 36).
     ///
@@ -371,7 +378,7 @@ public struct Settings: Codable, Equatable, Sendable {
         noteOrder: NoteOrder = .modified,
         footerCount: FooterCount = .words,
         textSize: Double = 15,
-        translucentPanes: Bool = true,
+        panelOpacity: Double = Settings.defaultPanelOpacity,
         hideFromScreenCapture: Bool = false,
         showOnEverySpace: Bool = true,
         checkForUpdates: Bool = BuildProfile.current.allowsSystemIntegration
@@ -392,7 +399,7 @@ public struct Settings: Codable, Equatable, Sendable {
         self.noteOrder = noteOrder
         self.footerCount = footerCount
         self.textSize = textSize
-        self.translucentPanes = translucentPanes
+        self.panelOpacity = min(max(panelOpacity, Self.panelOpacityRange.lowerBound), Self.panelOpacityRange.upperBound)
         self.hideFromScreenCapture = hideFromScreenCapture
         self.showOnEverySpace = showOnEverySpace
         self.checkForUpdates = checkForUpdates
@@ -433,7 +440,10 @@ public struct Settings: Codable, Equatable, Sendable {
             FooterCount(rawValue: try c.decodeIfPresent(String.self, forKey: .footerCount) ?? "")
             ?? d.footerCount
         textSize = try c.decodeIfPresent(Double.self, forKey: .textSize) ?? d.textSize
-        translucentPanes = try c.decodeIfPresent(Bool.self, forKey: .translucentPanes) ?? d.translucentPanes
+        let legacy = try decoder.container(keyedBy: LegacyCodingKeys.self)
+        let wasTranslucent = try legacy.decodeIfPresent(Bool.self, forKey: .translucentPanes) ?? true
+        panelOpacity = try c.decodeIfPresent(Double.self, forKey: .panelOpacity)
+            ?? (wasTranslucent ? d.panelOpacity : 1)
         hideFromScreenCapture =
             try c.decodeIfPresent(Bool.self, forKey: .hideFromScreenCapture) ?? d.hideFromScreenCapture
         showOnEverySpace =
@@ -443,6 +453,7 @@ public struct Settings: Codable, Equatable, Sendable {
 
         // Clamp rather than reject: a hand-typed 0 or 9999 should land somewhere sensible.
         textSize = min(max(textSize, Settings.textSizeRange.lowerBound), Settings.textSizeRange.upperBound)
+        panelOpacity = min(max(panelOpacity, Self.panelOpacityRange.lowerBound), Self.panelOpacityRange.upperBound)
         // 0 would mean "delete immediately, no undo" — the one value this control must never carry.
         recentlyDeletedDays = min(max(recentlyDeletedDays, 1), 365)
         // The accent lands in CSS, so anything that is not a colour has to be caught here rather

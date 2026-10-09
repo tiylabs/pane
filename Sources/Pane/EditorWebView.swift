@@ -254,10 +254,12 @@ final class EditorWebView: NSView {
     /// its own rounding; this only stops the material's square corners showing through them.
     static let cornerRadius: CGFloat = 14
 
-    /// Whether Swift draws the material, or the web layer paints a flat background instead.
-    var isTranslucent: Bool {
-        get { !material.isHidden }
-        set { material.isHidden = !newValue }
+    /// Fade only the background material; the web view's text and controls keep their opacity.
+    var panelOpacity: Double = Settings.defaultPanelOpacity {
+        didSet {
+            material.isHidden = panelOpacity >= 1 || panelOpacity <= 0
+            material.alphaValue = min(1, max(0, panelOpacity / Settings.defaultPanelOpacity))
+        }
     }
 
     /// Both subviews fill the view exactly. Explicit rather than autoresizing masks: this view is

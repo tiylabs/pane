@@ -129,7 +129,7 @@
   "appearance.textSize": "文字大小",
   "appearance.textSize.hint": "在任意面板中按 ⌘= / ⌘− / ⌘0",
   "appearance.material": "材质",
-  "appearance.translucent": "半透明面板",
+  "appearance.transparency": "面板透明度",
   "accent.amber": "琥珀",
   "accent.rose": "玫瑰",
   "accent.forest": "森林绿",

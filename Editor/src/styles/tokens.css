@@ -6,7 +6,7 @@
  * is invented: if a value is needed and the design does not have one, it gets a comment saying so.
  *
  * Two things the design parameterises through its own props block, which `applyVars()` implements:
- * the accent, and whether panes are translucent. Both are settings (see Settings.swift), so both are
+ * the accent, and the pane background opacity. Both are settings (see Settings.swift), so both are
  * variables here rather than baked in.
  */
 
@@ -354,21 +354,21 @@
    * one thing CSS cannot do, and this scrim supplies the colour the design actually specified. The
    * alpha is lower than the design's 88% precisely because the material is already contributing —
    * 88% here would composite twice and land far too pale. */
-  --panel-bg: rgba(247, 247, 249, 0.7);
+  --panel-bg: rgba(247, 247, 249, var(--panel-opacity, 0.7));
   --panel-blur: none;
 }
 
 @media (prefers-color-scheme: dark) {
   :root[data-vibrancy="on"]:not([data-appearance="light"]) {
-    --panel-bg: rgba(30, 30, 34, 0.6);
+    --panel-bg: rgba(30, 30, 34, var(--panel-opacity-dark, 0.6));
   }
 }
 
 :root[data-vibrancy="on"][data-appearance="dark"] {
-  --panel-bg: rgba(30, 30, 34, 0.6);
+  --panel-bg: rgba(30, 30, 34, var(--panel-opacity-dark, 0.6));
 }
 
-/* Vibrancy off (Settings.translucentPanes = false), matching the design's own applyVars() fallbacks. */
+/* At full opacity the material is hidden, matching the design's flat-background fallbacks. */
 :root[data-vibrancy="off"] {
   --panel-blur: none;
   --overlay-blur: none;

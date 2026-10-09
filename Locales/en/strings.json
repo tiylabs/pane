@@ -130,7 +130,7 @@
   "appearance.textSize": "Text size",
   "appearance.textSize.hint": "⌘= / ⌘− / ⌘0 in any pane",
   "appearance.material": "Material",
-  "appearance.translucent": "Translucent panes",
+  "appearance.transparency": "Panel transparency",
   "accent.amber": "Amber",
   "accent.rose": "Rose",
   "accent.forest": "Forest",

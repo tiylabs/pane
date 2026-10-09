@@ -97,7 +97,7 @@ func runStateTests() {
             Check.equal(s.appearance, Settings.Appearance.system)
             Check.equal(s.accent, Settings.defaultAccent)
             Check.equal(s.markdownTheme, "")
-            Check.expect(s.translucentPanes)
+            Check.equal(s.panelOpacity, Settings.defaultPanelOpacity)
         }
 
         Check.test("expands the tilde when resolving the vault") {

@@ -1171,7 +1171,7 @@ export function run(view, bar, doc) {
 
   for (const suite of [runUndo, runRenumber, runLayout, runBackspace, runTooltips, runListKinds,
                        runFooterCount, runLinkOpening, runMarkerSelection, runFindSurvives,
-                       runCaretToggles, runAccentColours]) {
+                       runCaretToggles, runAccentColours, runPanelOpacity]) {
     const result = suite(view, doc, bar);
     checked += result.checked;
     failures.push(...result.failures);
@@ -1508,6 +1508,44 @@ export function runLinkOpening(view, doc) {
   }
 
   handlers.pane = real;
+  return { checked, failures };
+}
+
+function runPanelOpacity(view, doc) {
+  const failures = [];
+  let checked = 0;
+  const check = (name, want, got) => {
+    checked++;
+    if (want !== got) failures.push({ case: `panel transparency: ${name}`, want, got });
+  };
+  const host = window.paneHost;
+  const probe = doc.createElement("div");
+  probe.style.backgroundColor = "var(--panel-bg)";
+  doc.body.append(probe);
+  const background = () => getComputedStyle(probe).backgroundColor;
+  const alpha = () => {
+    const colour = background();
+    return colour.startsWith("rgba(") ? Number(colour.split(",")[3].replace(")", "")) : 1;
+  };
+
+  for (const appearance of ["light", "dark", "system"]) {
+    host.applySettings({ appearance, panelOpacity: 0 });
+    check(`${appearance} fully transparent background`, 0, alpha());
+    host.applySettings({ panelOpacity: 0.4 });
+    const intermediate = alpha();
+    check(`${appearance} intermediate background`, true, intermediate > 0 && intermediate < 0.7);
+    host.applySettings({ panelOpacity: 1 });
+    check(`${appearance} fully opaque background`, 1, alpha());
+  }
+  host.applySettings({ appearance: "light", panelOpacity: 0.7 });
+  check("original light appearance", 0.7, alpha());
+  host.applySettings({ appearance: "dark", panelOpacity: 0.7 });
+  check("original dark appearance", 0.6, alpha());
+  host.applySettings({ panelOpacity: 0 });
+  check("editor text stays opaque", "1", getComputedStyle(doc.querySelector(".cm-content")).opacity);
+  check("pane stays opaque", "1", getComputedStyle(doc.querySelector(".pane")).opacity);
+  host.applySettings({ appearance: "light", panelOpacity: 0.7 });
+  probe.remove();
   return { checked, failures };
 }
 

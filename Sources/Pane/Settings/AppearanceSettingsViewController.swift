@@ -15,6 +15,8 @@ final class AppearanceSettingsViewController: NSViewController {
     private var swatches: [AccentSwatchButton] = []
     private var themePopUp: NSPopUpButton!
     private var sizeField: NSTextField!
+    private var transparencySlider: NSSlider!
+    private var transparencyField: NSTextField!
 
     init(settings: SettingsStore) {
         self.settings = settings
@@ -54,16 +56,30 @@ final class AppearanceSettingsViewController: NSViewController {
         swatchRow.orientation = .horizontal
         swatchRow.spacing = 8
 
-        // ---- material ----------------------------------------------------------------------
-        let translucent = SettingsForm.toggle(
-            current.translucentPanes, target: self, action: #selector(translucentChanged)
+        // ---- panel transparency -------------------------------------------------------------
+        transparencySlider = NSSlider(
+            value: (1 - current.panelOpacity) * 100, minValue: 0, maxValue: 100,
+            target: self, action: #selector(transparencyChanged)
         )
+        transparencySlider.isContinuous = true
+        transparencySlider.controlSize = .small
+        transparencySlider.setAccessibilityLabel(tr("appearance.transparency"))
+        transparencySlider.widthAnchor.constraint(equalToConstant: 160).isActive = true
+
+        transparencyField = NSTextField(labelWithString: "")
+        transparencyField.font = .monospacedDigitSystemFont(ofSize: 13, weight: .regular)
+        transparencyField.alignment = .right
+        transparencyField.widthAnchor.constraint(equalToConstant: 44).isActive = true
+
+        let transparencyControl = NSStackView(views: [transparencySlider, transparencyField])
+        transparencyControl.orientation = .horizontal
+        transparencyControl.spacing = 8
 
         form.header(tr("appearance.group.look"))
         form.card([
             SettingsRow(title: tr("appearance.appearance"), control: appearanceControl),
             SettingsRow(title: tr("appearance.accent"), control: swatchRow),
-            SettingsRow(title: tr("appearance.translucent"), control: translucent),
+            SettingsRow(title: tr("appearance.transparency"), control: transparencyControl),
         ])
 
         // ---- markdown theme ----------------------------------------------------------------
@@ -135,6 +151,9 @@ final class AppearanceSettingsViewController: NSViewController {
         let accent = Settings.accentColours(for: current.accent).light
         for swatch in swatches { swatch.isChosen = swatch.hex == accent }
         sizeField?.stringValue = "\(Int(current.textSize)) px"
+        let transparency = ((1 - current.panelOpacity) * 100).rounded()
+        transparencySlider?.doubleValue = transparency
+        transparencyField?.stringValue = "\(Int(transparency))%"
         selectTheme(current.markdownTheme)
     }
 
@@ -193,8 +212,11 @@ final class AppearanceSettingsViewController: NSViewController {
         settings.update { $0.textSize = Double(sender.integerValue) }
     }
 
-    @objc private func translucentChanged(_ sender: NSSwitch) {
-        settings.update { $0.translucentPanes = sender.state == .on }
+    @objc private func transparencyChanged(_ sender: NSSlider) {
+        let transparency = sender.doubleValue.rounded()
+        sender.doubleValue = transparency
+        transparencyField.stringValue = "\(Int(transparency))%"
+        settings.update { $0.panelOpacity = 1 - transparency / 100 }
     }
 }
 
