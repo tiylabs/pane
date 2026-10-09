@@ -217,7 +217,7 @@ final class StorageSettingsViewController: NSViewController {
             alert.messageText = tr("storage.useFailed")
             alert.informativeText = error.localizedDescription
             alert.alertStyle = .warning
-            PanePanel.steppingAside { alert.runModal() }
+            _ = PanePanel.steppingAside { alert.runModal() }
             refresh(settings.value)
             return
         }
