@@ -112,6 +112,13 @@ Two things about the layout worth knowing:
 application support directory and a vault default of `~/Pane-scratch` — so a debug session cannot
 reach your real notes or settings.
 
+## Translations
+
+Pane's interface is available in English and 简体中文, and a language is just a folder: copy
+`Locales/en/`, translate it, and run `Scripts/test.sh`. See [`Locales/README.md`](Locales/README.md)
+for the rules the tests enforce. New user-visible text goes in `Locales/en/strings.json` first — never
+as a literal in Swift or the editor — and the tests fail if a language falls behind.
+
 ## Commits
 
 One logical change per commit, and a message in the form `type: concise description` where type is
