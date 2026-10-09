@@ -28,7 +28,7 @@ final class AppearanceSettingsViewController: NSViewController {
     private static let appearances: [Settings.Appearance] = [.system, .light, .dark]
 
     override func loadView() {
-        let form = SettingsForm(labelWidth: 150)
+        let form = SettingsForm()
         let current = settings.value
 
         // ---- light / dark ------------------------------------------------------------------
@@ -40,7 +40,6 @@ final class AppearanceSettingsViewController: NSViewController {
         )
         appearanceControl.selectedSegment =
             Self.appearances.firstIndex(of: current.appearance) ?? 0
-        form.row(tr("appearance.appearance"), appearanceControl)
 
         // ---- accent ------------------------------------------------------------------------
         swatches = Settings.accentOptions.map { option in
@@ -52,9 +51,18 @@ final class AppearanceSettingsViewController: NSViewController {
         let swatchRow = NSStackView(views: swatches)
         swatchRow.orientation = .horizontal
         swatchRow.spacing = 8
-        form.row(tr("appearance.accent"), swatchRow)
 
-        form.separator()
+        // ---- material ----------------------------------------------------------------------
+        let translucent = SettingsForm.toggle(
+            current.translucentPanes, target: self, action: #selector(translucentChanged)
+        )
+
+        form.header(tr("appearance.group.look"))
+        form.card([
+            SettingsRow(title: tr("appearance.appearance"), control: appearanceControl),
+            SettingsRow(title: tr("appearance.accent"), control: swatchRow),
+            SettingsRow(title: tr("appearance.translucent"), control: translucent),
+        ])
 
         // ---- markdown theme ----------------------------------------------------------------
         themePopUp = SettingsForm.popUp([], target: self, action: #selector(themeChanged))
@@ -63,26 +71,9 @@ final class AppearanceSettingsViewController: NSViewController {
         // file, a choice you can still back out of — and nothing is asked here. Every other one in
         // Pane earns it: Browse Notes… and Actions… ask which, Rename File… asks for a name,
         // Export… and Choose Folder… put up a panel, and Settings… is Apple's own convention.
-        let openThemes = NSButton(
-            title: tr("appearance.theme.open"), target: self, action: #selector(openThemesFolder)
+        let openThemes = SettingsForm.push(
+            tr("appearance.theme.open"), target: self, action: #selector(openThemesFolder)
         )
-        openThemes.isBordered = false
-        openThemes.contentTintColor = .controlAccentColor
-        openThemes.font = .systemFont(ofSize: 12)
-
-        // Dropdown, then the sentence explaining what a theme is, then the way to add one — frame
-        // 3b's order, and the order the question actually arrives in.
-        let themeNote = NSTextField(
-            wrappingLabelWithString: tr("appearance.theme.note")
-        )
-        themeNote.font = .systemFont(ofSize: 11)
-        themeNote.textColor = .secondaryLabelColor
-        themeNote.preferredMaxLayoutWidth = 280
-        themeNote.setContentCompressionResistancePriority(.required, for: .vertical)
-
-        form.row(tr("appearance.theme"), stacked: [themePopUp, themeNote, openThemes])
-
-        form.separator()
 
         // ---- text size ---------------------------------------------------------------------
         let stepper = NSStepper()
@@ -94,24 +85,32 @@ final class AppearanceSettingsViewController: NSViewController {
         stepper.target = self
         stepper.action = #selector(textSizeChanged)
 
+        // Monospaced digits and a fixed width: "9 px" → "10 px" must not nudge the stepper sideways.
         sizeField = NSTextField(labelWithString: "\(Int(current.textSize)) px")
-        sizeField.font = .systemFont(ofSize: 13)
+        sizeField.font = .monospacedDigitSystemFont(ofSize: 13, weight: .regular)
         sizeField.alignment = .right
-        sizeField.widthAnchor.constraint(equalToConstant: 44).isActive = true
+        sizeField.widthAnchor.constraint(equalToConstant: 48).isActive = true
 
-        let sizeRow = NSStackView(views: [
-            sizeField, stepper, SettingsForm.note(tr("appearance.textSize.hint")),
+        let sizeControl = NSStackView(views: [sizeField, stepper])
+        sizeControl.orientation = .horizontal
+        sizeControl.spacing = 6
+
+        form.header(tr("appearance.group.markdown"))
+        form.card([
+            // Dropdown, then the way to add one; the sentence explaining what a theme is sits under
+            // the title, where the explanation of every row lives.
+            SettingsRow(
+                title: tr("appearance.theme"),
+                explanation: tr("appearance.theme.note"),
+                control: themePopUp
+            ),
+            SettingsRow(title: tr("appearance.theme.folder"), control: openThemes),
+            SettingsRow(
+                title: tr("appearance.textSize"),
+                explanation: tr("appearance.textSize.hint"),
+                control: sizeControl
+            ),
         ])
-        sizeRow.orientation = .horizontal
-        sizeRow.spacing = 8
-        form.row(tr("appearance.textSize"), sizeRow)
-
-        // ---- material ----------------------------------------------------------------------
-        let translucent = SettingsForm.checkbox(
-            tr("appearance.translucent"), target: self, action: #selector(translucentChanged)
-        )
-        translucent.state = current.translucentPanes ? .on : .off
-        form.row(tr("appearance.material"), translucent)
 
         view = form.makeContentView()
         reloadThemes()
@@ -191,7 +190,7 @@ final class AppearanceSettingsViewController: NSViewController {
         settings.update { $0.textSize = Double(sender.integerValue) }
     }
 
-    @objc private func translucentChanged(_ sender: NSButton) {
+    @objc private func translucentChanged(_ sender: NSSwitch) {
         settings.update { $0.translucentPanes = sender.state == .on }
     }
 }

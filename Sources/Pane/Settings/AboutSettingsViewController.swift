@@ -70,50 +70,52 @@ final class AboutSettingsViewController: NSViewController {
         status.font = .systemFont(ofSize: 12)
         status.textColor = .secondaryLabelColor
         status.alignment = .center
+        status.isHidden = true
 
-        let links = NSStackView(views: [
-            link(tr("about.github"), to: Self.repository),
-            link(tr("about.releases"), to: Self.releasesPage),
-        ])
-        links.orientation = .horizontal
-        links.spacing = 18
+        // Hero: icon, name, version, and the one action. Centred in the card width, with the status
+        // line under the button taking no height until a check has been made.
+        let hero = NSStackView(views: [icon, name, versionLabel, checkButton, status])
+        hero.orientation = .vertical
+        hero.alignment = .centerX
+        hero.spacing = 10
+        hero.setCustomSpacing(4, after: name)
+        hero.setCustomSpacing(16, after: versionLabel)
+        hero.translatesAutoresizingMaskIntoConstraints = false
 
-        let stack = NSStackView(views: [icon, name, versionLabel, checkButton, status, links])
-        stack.orientation = .vertical
-        stack.alignment = .centerX
-        stack.spacing = 10
-        stack.setCustomSpacing(4, after: name)
-        stack.setCustomSpacing(18, after: versionLabel)
-        stack.setCustomSpacing(20, after: status)
-        stack.translatesAutoresizingMaskIntoConstraints = false
-
-        let container = NSView()
-        container.addSubview(stack)
+        let heroBlock = NSView()
+        heroBlock.addSubview(hero)
         NSLayoutConstraint.activate([
-            stack.topAnchor.constraint(equalTo: container.topAnchor, constant: 28),
-            stack.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -24),
-            stack.centerXAnchor.constraint(equalTo: container.centerXAnchor),
-            // Every tab is the same width, or `NSTabViewController` resizes the *window* on the way
-            // in and out of this one. It was 380 and did exactly that.
-            container.widthAnchor.constraint(equalToConstant: SettingsForm.contentWidth),
+            hero.topAnchor.constraint(equalTo: heroBlock.topAnchor, constant: 8),
+            hero.bottomAnchor.constraint(equalTo: heroBlock.bottomAnchor, constant: -4),
+            hero.centerXAnchor.constraint(equalTo: heroBlock.centerXAnchor),
         ])
-        // Same rule as every other tab: pin to the top and hug vertically, or `NSTabViewController`
-        // stretches this one to the tallest tab and the stack scatters.
-        container.setContentHuggingPriority(.required, for: .vertical)
-        view = container
+
+        // Links are rows like any other, so they line up with every other tab's cards.
+        let form = SettingsForm()
+        form.block(heroBlock)
+        form.card([
+            linkRow(tr("about.github"), to: Self.repository),
+            linkRow(tr("about.releases"), to: Self.releasesPage),
+        ])
+        view = form.makeContentView()
+    }
+
+    private func linkRow(_ title: String, to url: URL) -> SettingsRow {
+        let open = NSButton(
+            image: NSImage(
+                systemSymbolName: "arrow.up.right.square", accessibilityDescription: title
+            ) ?? NSImage(),
+            target: self,
+            action: #selector(openLink(_:))
+        )
+        open.isBordered = false
+        open.contentTintColor = .secondaryLabelColor
+        open.identifier = NSUserInterfaceItemIdentifier(url.absoluteString)
+        open.setAccessibilityLabel(title)
+        return SettingsRow(title: title, control: open)
     }
 
     func settingsChanged(_ new: Settings) {}
-
-    private func link(_ title: String, to url: URL) -> NSButton {
-        let button = NSButton(title: title, target: self, action: #selector(openLink(_:)))
-        button.isBordered = false
-        button.bezelStyle = .inline
-        button.contentTintColor = .linkColor
-        button.font = .systemFont(ofSize: 12)
-        button.identifier = NSUserInterfaceItemIdentifier(url.absoluteString)
-        return button
-    }
 
     @objc private func openLink(_ sender: NSButton) {
         guard let raw = sender.identifier?.rawValue, let url = URL(string: raw) else { return }
@@ -123,6 +125,7 @@ final class AboutSettingsViewController: NSViewController {
     @objc private func checkForUpdates() {
         checkButton.isEnabled = false
         status.stringValue = tr("about.checking")
+        status.isHidden = false
 
         UpdateChecker.fetchStatus { [weak self] result in
             DispatchQueue.main.async {

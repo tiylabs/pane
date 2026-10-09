@@ -42,78 +42,43 @@ final class ShortcutsSettingsViewController: NSViewController {
     required init?(coder: NSCoder) { fatalError("not used") }
 
     override func loadView() {
-        let rows = NSStackView()
-        rows.orientation = .vertical
-        rows.alignment = .leading
-        rows.spacing = 0
-        rows.translatesAutoresizingMaskIntoConstraints = false
+        let form = SettingsForm()
 
+        // A caption and a card per group, whenever the group changes. These are ⌘K's own groups, so
+        // the two places that list the same actions agree about which belong together.
         var group: String?
+        var rows: [NSView] = []
+        func flush() {
+            guard let group, !rows.isEmpty else { return }
+            form.header(Settings.groupName(group))
+            form.card(rows)
+            rows = []
+        }
         for action in Settings.shortcutActions {
-            // A heading whenever the group changes. A flat column is a list you read rather than
-            // scan; these are ⌘K's own groups, so the two places that list the same actions agree
-            // about which belong together.
             if action.group != group {
+                flush()
                 group = action.group
-                rows.addArrangedSubview(header(Settings.groupName(action.group)))
             }
-
             let recorder = PaneShortcutRecorderView(binding: settings.value.shortcut(action.key))
             recorder.onRecord = { [weak self] binding in
                 self?.settings.update { $0.shortcuts[action.key] = binding }
             }
             paneRecorders.append((action.key, recorder))
-            rows.addArrangedSubview(row(label: Settings.label(of: action.key), control: recorder))
+            rows.append(SettingsRow(title: Settings.label(of: action.key), control: recorder))
         }
+        flush()
 
         // No "click a shortcut to re-record it" caption. The rows are obviously buttons and they say
-        // "Click to record" the moment one is focused; a line of prose under every screen is what
-        // this window had too much of.
-        let restore = SettingsForm.push(
-            tr("shortcuts.restore"), target: self, action: #selector(restoreDefaults)
+        // "Click to record" the moment one is focused.
+        form.trailing(
+            SettingsForm.push(tr("shortcuts.restore"), target: self, action: #selector(restoreDefaults))
         )
 
-        let footer = NSStackView(views: [NSView(), restore])
-        footer.orientation = .horizontal
-        footer.distribution = .fill
-        footer.spacing = 8
-        footer.translatesAutoresizingMaskIntoConstraints = false
-
-        // Same reason as `SettingsForm.makeContentView`: anything that ties this to the container's
-        // full height hands the tab view's spare space to the stack, which puts it between the
-        // shortcut rows. Hug vertically, pin to the top, and let the container be taller.
-        rows.setContentHuggingPriority(.required, for: .vertical)
-
-        let container = NSView()
-        container.addSubview(rows)
-        container.addSubview(footer)
-
-        NSLayoutConstraint.activate([
-            rows.topAnchor.constraint(equalTo: container.topAnchor, constant: 14),
-            rows.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
-            rows.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -24),
-
-            footer.topAnchor.constraint(equalTo: rows.bottomAnchor, constant: 12),
-            footer.leadingAnchor.constraint(equalTo: rows.leadingAnchor),
-            footer.trailingAnchor.constraint(equalTo: rows.trailingAnchor),
-
-            container.bottomAnchor.constraint(greaterThanOrEqualTo: footer.bottomAnchor, constant: 20),
-
-            container.widthAnchor.constraint(equalToConstant: SettingsForm.contentWidth),
-        ])
-
-        // This is the one tab that does not fit the window every other tab wants.
-        //
-        // `NSTabViewController` gives each tab its own height, which is the standard behaviour and
-        // was fine while every tab was within a hundred points of the others. Ten rows in three
-        // groups plus a footer is roughly twice the tallest of the rest, so switching to it threw
-        // the window open and switching away snapped it shut — the window jumping around the screen
-        // as you read the tab bar. Every tab is one size now (see `SettingsWindowController`), and
-        // the tab that does not fit scrolls rather than deciding the size for the other four.
-        //
-        // The scroll view holds the container at its natural height and lets the tab clip it, which
-        // is why the container keeps hugging vertically: the rows must stay their own height rather
-        // than sharing out whatever the scroll view has.
+        // This is the one tab that does not fit the window every other tab wants, so the window is
+        // sized by the others (see `SettingsWindowController`) and this one scrolls inside it. The
+        // content hugs vertically: the rows must stay their own height rather than sharing out
+        // whatever the scroll view has.
+        let container = form.makeContentView()
         let scroll = NSScrollView()
         scroll.drawsBackground = false
         scroll.hasVerticalScroller = true
@@ -127,41 +92,6 @@ final class ShortcutsSettingsViewController: NSViewController {
         ])
 
         view = scroll
-    }
-
-    /// A group's name, in the type the rest of the window uses for a quiet label.
-    private func header(_ text: String) -> NSView {
-        let label = NSTextField(labelWithString: text)
-        label.font = .systemFont(ofSize: 11, weight: .semibold)
-        label.textColor = .tertiaryLabelColor
-
-        let stack = NSStackView(views: [label])
-        stack.orientation = .horizontal
-        stack.edgeInsets = NSEdgeInsets(top: 14, left: 2, bottom: 4, right: 2)
-        return stack
-    }
-
-    /// Label left, recorder right, hairline underneath — the frame's row exactly.
-    private func row(label text: String, control: NSView) -> NSView {
-        let label = NSTextField(labelWithString: text)
-        label.font = .systemFont(ofSize: 13)
-
-        let line = NSStackView(views: [label, NSView(), control])
-        line.orientation = .horizontal
-        line.spacing = 8
-        line.edgeInsets = NSEdgeInsets(top: 6, left: 2, bottom: 6, right: 2)
-
-        let separator = NSBox()
-        separator.boxType = .separator
-
-        let stack = NSStackView(views: [line, separator])
-        stack.orientation = .vertical
-        stack.alignment = .leading
-        stack.spacing = 0
-        stack.translatesAutoresizingMaskIntoConstraints = false
-        line.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
-        separator.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
-        return stack
     }
 
     func settingsChanged(_ new: Settings) {

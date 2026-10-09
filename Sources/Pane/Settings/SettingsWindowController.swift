@@ -106,6 +106,9 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         NSApp.activate(ignoringOtherApps: true)
         showWindow(nil)
         window?.makeKeyAndOrderFront(nil)
+        // Nothing is focused on open. The first recorder would otherwise take the key view and draw a
+        // focus ring that reads as "this one is being edited".
+        window?.makeFirstResponder(nil)
     }
 
     /// And the pane goes back to floating the moment this window is gone.

@@ -17,6 +17,7 @@ final class GeneralSettingsViewController: NSViewController {
     private var recorder: HotkeyRecorderView!
     private var noteOrder: NSPopUpButton!
     private var languagePopUp: NSPopUpButton!
+    private var dismissPopUp: NSPopUpButton!
 
     /// "System default" first, then every language found in `Locales/`, each in its own script.
     /// Built from `L10n.availableLanguages`, so a new language directory appears here with no edit.
@@ -34,11 +35,11 @@ final class GeneralSettingsViewController: NSViewController {
     required init?(coder: NSCoder) { fatalError("not used") }
 
     override func loadView() {
-        let form = SettingsForm(labelWidth: 170)
+        let form = SettingsForm()
         let current = settings.value
 
         // ---- language ----------------------------------------------------------------------
-        // First, and above the rest: it is the row you most need to be able to find when the
+        // First, and in a card of its own: it is the row you most need to be able to find when the
         // window is in a language you cannot read. Language names are never translated — each is
         // written in its own script for exactly that reason.
         languagePopUp = SettingsForm.popUp(
@@ -47,79 +48,65 @@ final class GeneralSettingsViewController: NSViewController {
             action: #selector(languageChanged)
         )
         languagePopUp.selectItem(at: languageChoices.firstIndex(of: current.language) ?? 0)
-        form.row(tr("general.language"), languagePopUp)
+        form.card([SettingsRow(title: tr("general.language"), control: languagePopUp)])
 
-        form.separator()
-
-        // ---- summon ------------------------------------------------------------------------
+        // ---- summon and dismiss ------------------------------------------------------------
         recorder = HotkeyRecorderView(hotkey: current.summonHotkey)
         recorder.onRecord = { [weak self] hotkey in
             self?.settings.update { $0.summonHotkey = hotkey }
         }
-        let recorderRow = NSStackView(views: [recorder])
-        recorderRow.orientation = .horizontal
-        recorderRow.spacing = 8
-        form.row(tr("general.summonHotkey"), recorderRow)
 
-        // ---- dismiss -----------------------------------------------------------------------
-        let toggles = SettingsForm.radio(
-            tr("general.dismiss.toggle"), target: self, action: #selector(dismissModeChanged), tag: 0
+        // Two choices of one setting, so a pop-up row like every other choice in the window rather
+        // than the only radio group in it.
+        dismissPopUp = SettingsForm.popUp(
+            [tr("general.dismiss.toggle"), tr("general.dismiss.escape")],
+            target: self,
+            action: #selector(dismissModeChanged)
         )
-        let escOnly = SettingsForm.radio(
-            tr("general.dismiss.escape"), target: self, action: #selector(dismissModeChanged), tag: 1
-        )
-        (current.dismissMode == .sameHotkeyToggles ? toggles : escOnly).state = .on
-        form.row(tr("general.dismiss"), stacked: [toggles, escOnly])
+        dismissPopUp.selectItem(at: current.dismissMode == .sameHotkeyToggles ? 0 : 1)
 
-        form.separator()
+        form.card([
+            SettingsRow(title: tr("general.summonHotkey"), control: recorder),
+            SettingsRow(title: tr("general.dismiss"), control: dismissPopUp),
+        ])
 
-        // ---- launch ------------------------------------------------------------------------
-        let login = SettingsForm.checkbox(
-            tr("general.startAtLogin"), target: self, action: #selector(launchAtLoginChanged)
-        )
-        login.state = current.launchAtLogin ? .on : .off
-        form.row(tr("general.launch"), login)
-
-        let menuBar = SettingsForm.checkbox(
-            tr("general.showMenuBarIcon"), target: self, action: #selector(showMenuBarIconChanged)
-        )
-        menuBar.state = current.showMenuBarIcon ? .on : .off
-        form.row("", menuBar)
-
+        // ---- behaviour ---------------------------------------------------------------------
         // No Spaces row. `showOnEverySpace` is a ⌘K toggle (decision 93) and ⌘K is where the pane's
         // own toggles live — the format bar, auto-sizing and hiding from screen capture all persist
-        // to `settings.json` exactly the same way and none of them has a row here. This one had
-        // both, with the labels the opposite way round: a checkbox reading "Show on every Space"
-        // above a row reading "Keep on This Space", which reads as two features and was reported as
-        // two. The row goes; the setting, the ⌘K row and ⌥⌘S are untouched.
+        // to `settings.json` exactly the same way and none of them has a row here.
+        let login = SettingsForm.toggle(
+            current.launchAtLogin, target: self, action: #selector(launchAtLoginChanged)
+        )
+        let menuBar = SettingsForm.toggle(
+            current.showMenuBarIcon, target: self, action: #selector(showMenuBarIconChanged)
+        )
+        let dock = SettingsForm.toggle(
+            current.showDockIcon, target: self, action: #selector(showDockIconChanged)
+        )
 
-        // ---- switcher order ----------------------------------------------------------------
+        // The switch on the **network call**, not on the notice — which is why it is a row at all.
+        // Decision 126 says a setting whose control already lives in ⌘K does not get a second
+        // entrance here; this one has no other entrance, and it is the only thing in Pane that
+        // talks to the network (decisions 94, 136). Somebody who wants an app that makes no
+        // requests should be able to have one without editing JSON.
+        let updates = SettingsForm.toggle(
+            current.checkForUpdates, target: self, action: #selector(checkForUpdatesChanged)
+        )
+
         // Behaviour, not appearance, so it is here rather than in Appearance: it changes which note
         // ⌘P puts under your finger, which is the same kind of question as how the pane is dismissed.
         noteOrder = SettingsForm.popUp(
             Settings.NoteOrder.allCases.map(\.label), target: self, action: #selector(noteOrderChanged)
         )
         noteOrder.selectItem(at: Settings.NoteOrder.allCases.firstIndex(of: current.noteOrder) ?? 0)
-        form.row(tr("general.sortNotes"), noteOrder)
 
-        // ---- dock --------------------------------------------------------------------------
-        let dock = SettingsForm.checkbox(
-            tr("general.showDockIcon"), target: self, action: #selector(showDockIconChanged)
-        )
-        dock.state = current.showDockIcon ? .on : .off
-        form.row(tr("general.dock"), dock)
-
-        // ---- updates -----------------------------------------------------------------------
-        // The switch on the **network call**, not on the notice — which is why it is a row at all.
-        // Decision 126 says a setting whose control already lives in ⌘K does not get a second
-        // entrance here; this one has no other entrance, and it is the only thing in Pane that
-        // talks to the network (decisions 94, 136). Somebody who wants an app that makes no
-        // requests should be able to have one without editing JSON.
-        let updates = SettingsForm.checkbox(
-            tr("general.checkUpdates"), target: self, action: #selector(checkForUpdatesChanged)
-        )
-        updates.state = current.checkForUpdates ? .on : .off
-        form.row(tr("general.updates"), updates)
+        form.card([
+            SettingsRow(title: tr("general.startAtLogin"), control: login),
+            SettingsRow(title: tr("general.showMenuBarIcon"), control: menuBar),
+            SettingsRow(title: tr("general.showDockIcon"), control: dock),
+            SettingsRow(title: tr("general.checkUpdates"), control: updates),
+            SettingsRow(title: tr("general.sortNotes"), control: noteOrder),
+        ])
 
         view = form.makeContentView()
     }
@@ -143,6 +130,7 @@ final class GeneralSettingsViewController: NSViewController {
         if let index = languageChoices.firstIndex(of: new.language) {
             languagePopUp?.selectItem(at: index)
         }
+        dismissPopUp?.selectItem(at: new.dismissMode == .sameHotkeyToggles ? 0 : 1)
         if let index = Settings.NoteOrder.allCases.firstIndex(of: new.noteOrder) {
             noteOrder?.selectItem(at: index)
         }
@@ -150,23 +138,25 @@ final class GeneralSettingsViewController: NSViewController {
 
     // MARK: - Actions
 
-    @objc private func dismissModeChanged(_ sender: NSButton) {
-        settings.update { $0.dismissMode = sender.tag == 0 ? .sameHotkeyToggles : .escapeOnly }
+    @objc private func dismissModeChanged(_ sender: NSPopUpButton) {
+        settings.update {
+            $0.dismissMode = sender.indexOfSelectedItem == 0 ? .sameHotkeyToggles : .escapeOnly
+        }
     }
 
-    @objc private func launchAtLoginChanged(_ sender: NSButton) {
+    @objc private func launchAtLoginChanged(_ sender: NSSwitch) {
         settings.update { $0.launchAtLogin = sender.state == .on }
     }
 
-    @objc private func checkForUpdatesChanged(_ sender: NSButton) {
+    @objc private func checkForUpdatesChanged(_ sender: NSSwitch) {
         settings.update { $0.checkForUpdates = sender.state == .on }
     }
 
-    @objc private func showMenuBarIconChanged(_ sender: NSButton) {
+    @objc private func showMenuBarIconChanged(_ sender: NSSwitch) {
         settings.update { $0.showMenuBarIcon = sender.state == .on }
     }
 
-    @objc private func showDockIconChanged(_ sender: NSButton) {
+    @objc private func showDockIconChanged(_ sender: NSSwitch) {
         settings.update { $0.showDockIcon = sender.state == .on }
     }
 }

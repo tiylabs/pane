@@ -25,9 +25,8 @@ final class StorageSettingsViewController: NSViewController {
     var onWillMoveNotes: (() -> Void)?
 
     private var pathField: NSTextField!
-    private var offRadio: NSButton!
-    private var iCloudRadio: NSButton!
-    private var syncNote: NSTextField!
+    private var syncPopUp: NSPopUpButton!
+    private var syncRow: SettingsRow!
 
     init(settings: SettingsStore) {
         self.settings = settings
@@ -57,44 +56,34 @@ final class StorageSettingsViewController: NSViewController {
     }
 
     override func loadView() {
-        let form = SettingsForm(labelWidth: 150)
+        let form = SettingsForm()
         let current = settings.value
 
         // ---- location ----------------------------------------------------------------------
         pathField = SettingsForm.pathField(current.vaultPath)
         let change = SettingsForm.push(tr("storage.change"), target: self, action: #selector(chooseFolder))
-        let folderRow = NSStackView(views: [pathField, change])
-        folderRow.orientation = .horizontal
-        folderRow.spacing = 8
-        // Fixed rather than a minimum: the label column is 150 and the tab is 540, so a field free to
-        // grow pushes Change… past the window edge and drags every other row's alignment with it.
-        pathField.widthAnchor.constraint(equalToConstant: 216).isActive = true
-        form.row(tr("storage.notesFolder"), folderRow)
+        let folderControl = NSStackView(views: [pathField, change])
+        folderControl.orientation = .horizontal
+        folderControl.spacing = 8
+        // Fixed rather than a minimum: a field free to grow pushes Change… past the card edge.
+        pathField.widthAnchor.constraint(equalToConstant: 200).isActive = true
 
-        form.row(tr("storage.format"), SettingsForm.note("Markdown (.md)"))
-
-        form.separator()
+        form.card([
+            SettingsRow(title: tr("storage.notesFolder"), control: folderControl),
+            SettingsRow(title: tr("storage.format"), control: SettingsForm.value("Markdown (.md)")),
+        ])
 
         // ---- sync --------------------------------------------------------------------------
-        offRadio = SettingsForm.radio(
-            tr("storage.sync.off"), target: self, action: #selector(syncChanged), tag: 0
+        // A pop-up row, not a radio group: three mutually exclusive locations is one choice, and it
+        // keeps this card the same shape as every other. The dimmed third item is "coming".
+        syncPopUp = SettingsForm.popUp(
+            [tr("storage.sync.off"), tr("storage.sync.icloud"), tr("storage.sync.peer")],
+            target: self,
+            action: #selector(syncChanged)
         )
-        iCloudRadio = SettingsForm.radio(
-            tr("storage.sync.icloud"), target: self, action: #selector(syncChanged), tag: 1
-        )
-
-        syncNote = NSTextField(labelWithString: "")
-        syncNote.font = .systemFont(ofSize: 11)
-        syncNote.textColor = .secondaryLabelColor
-
-        let peer = SettingsForm.radio(
-            tr("storage.sync.peer"), target: self, action: #selector(syncChanged), tag: 2
-        )
-        peer.isEnabled = false
-
-        form.row(tr("storage.sync"), stacked: [offRadio, iCloudRadio, syncNote, peer])
-
-        form.separator()
+        syncPopUp.autoenablesItems = false
+        syncPopUp.item(at: 2)?.isEnabled = false
+        syncRow = SettingsRow(title: tr("storage.sync"), control: syncPopUp)
 
         // ---- recently deleted --------------------------------------------------------------
         let retention = SettingsForm.popUp(
@@ -105,7 +94,11 @@ final class StorageSettingsViewController: NSViewController {
         retention.selectItem(
             at: Settings.recentlyDeletedOptions.firstIndex(of: current.recentlyDeletedDays) ?? 1
         )
-        form.row(tr("storage.recentlyDeleted"), retention)
+
+        form.card([
+            syncRow,
+            SettingsRow(title: tr("storage.recentlyDeleted"), control: retention),
+        ])
 
         view = form.makeContentView()
         refresh(current)
@@ -118,12 +111,10 @@ final class StorageSettingsViewController: NSViewController {
     private func refresh(_ current: Settings) {
         pathField?.stringValue = current.vaultPath
         let iCloud = Self.isInICloudDrive(current.vaultURL)
-        offRadio?.state = iCloud ? .off : .on
-        iCloudRadio?.state = iCloud ? .on : .off
-        syncNote?.stringValue = iCloud
-            ? tr("storage.syncedNote")
-            : ""
-        syncNote?.isHidden = !iCloud
+        syncPopUp?.selectItem(at: iCloud ? 1 : 0)
+        // The explanation only exists while there is something to say; hidden, it takes no height.
+        syncRow?.explanationLabel.stringValue = iCloud ? tr("storage.syncedNote") : ""
+        syncRow?.explanationLabel.isHidden = !iCloud
     }
 
     // MARK: - Actions
@@ -149,8 +140,8 @@ final class StorageSettingsViewController: NSViewController {
         adopt(chosen, movingNotes: false)
     }
 
-    @objc private func syncChanged(_ sender: NSButton) {
-        let destination = sender.tag == 1 ? Self.iCloudDriveVault
+    @objc private func syncChanged(_ sender: NSPopUpButton) {
+        let destination = sender.indexOfSelectedItem == 1 ? Self.iCloudDriveVault
             : URL(fileURLWithPath: (Settings.defaultVaultPath as NSString).expandingTildeInPath)
         let source = settings.value.vaultURL
 
@@ -190,7 +181,7 @@ final class StorageSettingsViewController: NSViewController {
         let response = PanePanel.steppingAside { alert.runModal() }
         let cancel: NSApplication.ModalResponse = noteCount > 0 ? .alertThirdButtonReturn : .alertSecondButtonReturn
         guard response != cancel else {
-            refresh(settings.value)  // put the radio back where it was
+            refresh(settings.value)  // put the pop-up back where it was
             return
         }
 
