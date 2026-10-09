@@ -80,7 +80,10 @@ final class ShortcutsSettingsViewController: NSViewController {
         // whatever the scroll view has.
         let container = form.makeContentView()
         let scroll = NSScrollView()
-        scroll.drawsBackground = false
+        // AppKit uses the scroll view's background for the toolbar's scroll-edge appearance.
+        // Match the other tabs' window background rather than leaving this page transparent.
+        scroll.drawsBackground = true
+        scroll.backgroundColor = .windowBackgroundColor
         scroll.hasVerticalScroller = true
         scroll.autohidesScrollers = true
         scroll.horizontalScrollElasticity = .none
