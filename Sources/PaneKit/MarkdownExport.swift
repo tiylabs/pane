@@ -29,6 +29,7 @@ public enum MarkdownExport {
         language: String = L10n.fallbackLanguage
     ) -> String {
         let heading = title.isEmpty ? L10n.t("export.defaultName", language: language) : title
+        let colours = Settings.accentColours(for: MarkdownExport.safeAccent(accent))
         return """
         <!DOCTYPE html>
         <html lang="\(escape(language))">
@@ -37,10 +38,10 @@ public enum MarkdownExport {
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>\(escape(heading))</title>
         <style>
-        :root { --accent: \(MarkdownExport.safeAccent(accent)); --ink: #1d1d1f; --muted: #6e6e73;
+        :root { --accent: \(colours.light); --ink: #1d1d1f; --muted: #6e6e73;
                 --rule: rgba(0,0,0,.1); --fill: rgba(0,0,0,.045); --bg: #fff; }
         @media (prefers-color-scheme: dark) {
-          :root { --ink: #f2f2f5; --muted: #a0a0a6; --rule: rgba(255,255,255,.14);
+          :root { --accent: \(colours.dark); --ink: #f2f2f5; --muted: #a0a0a6; --rule: rgba(255,255,255,.14);
                   --fill: rgba(255,255,255,.07); --bg: #1a1a1c; }
         }
         body { margin: 0; padding: 48px 24px; background: var(--bg); color: var(--ink);
@@ -79,7 +80,7 @@ public enum MarkdownExport {
     /// The accent lands inside a `<style>` block, so anything that is not a colour has to be caught
     /// here — the same argument `Settings` makes for validating it on the way in.
     private static func safeAccent(_ value: String) -> String {
-        Settings.isHexColour(value) ? value : "#c98a1f"
+        Settings.isHexColour(value) ? value : Settings.defaultAccent
     }
 
     // MARK: - Blocks

@@ -43,7 +43,9 @@ final class AppearanceSettingsViewController: NSViewController {
 
         // ---- accent ------------------------------------------------------------------------
         swatches = Settings.accentOptions.map { option in
-            let swatch = AccentSwatchButton(hex: option.hex, name: Settings.accentName(option.id))
+            let swatch = AccentSwatchButton(
+                hex: option.hex, darkHex: option.darkHex, name: Settings.accentName(option.id)
+            )
             swatch.target = self
             swatch.action = #selector(accentChanged(_:))
             return swatch
@@ -130,7 +132,8 @@ final class AppearanceSettingsViewController: NSViewController {
 
     private func refresh(_ current: Settings) {
         appearanceControl?.selectedSegment = Self.appearances.firstIndex(of: current.appearance) ?? 0
-        for swatch in swatches { swatch.isChosen = swatch.hex == current.accent }
+        let accent = Settings.accentColours(for: current.accent).light
+        for swatch in swatches { swatch.isChosen = swatch.hex == accent }
         sizeField?.stringValue = "\(Int(current.textSize)) px"
         selectTheme(current.markdownTheme)
     }
@@ -204,13 +207,18 @@ final class AppearanceSettingsViewController: NSViewController {
 final class AccentSwatchButton: NSButton {
 
     let hex: String
+    private let darkHex: String
 
     var isChosen = false {
-        didSet { needsDisplay = true }
+        didSet {
+            setAccessibilityValue(isChosen ? 1 : 0)
+            needsDisplay = true
+        }
     }
 
-    init(hex: String, name: String) {
+    init(hex: String, darkHex: String, name: String) {
         self.hex = hex
+        self.darkHex = darkHex
         super.init(frame: .zero)
         translatesAutoresizingMaskIntoConstraints = false
         isBordered = false
@@ -226,7 +234,8 @@ final class AccentSwatchButton: NSButton {
     required init?(coder: NSCoder) { fatalError("not used") }
 
     override func draw(_ dirtyRect: NSRect) {
-        let colour = NSColor(hex: hex) ?? .controlAccentColor
+        let isDark = effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
+        let colour = NSColor(hex: isDark ? darkHex : hex) ?? .controlAccentColor
         let dot = bounds.insetBy(dx: 3, dy: 3)
 
         colour.setFill()
@@ -239,6 +248,11 @@ final class AccentSwatchButton: NSButton {
         let ring = NSBezierPath(ovalIn: bounds.insetBy(dx: 0.75, dy: 0.75))
         ring.lineWidth = 1.5
         ring.stroke()
+    }
+
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        needsDisplay = true
     }
 }
 

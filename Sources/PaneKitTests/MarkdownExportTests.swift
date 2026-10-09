@@ -100,7 +100,15 @@ func runMarkdownExportTests() {
                 from: "# x\n", title: "x", accent: "red; } body { display: none"
             )
             Check.expect(!html.contains("display: none"), "an invalid accent must fall back")
-            Check.expect(html.contains("--accent: #c98a1f"))
+            Check.expect(html.contains("--accent: \(Settings.defaultAccent)"))
+        }
+
+        Check.test("built-in accents export both appearance tones") {
+            for option in Settings.accentOptions {
+                let html = MarkdownExport.html(from: "[Link](https://example.com)", title: "t", accent: option.hex)
+                Check.expect(html.contains("--accent: \(option.hex);"), option.id)
+                Check.expect(html.contains("--accent: \(option.darkHex);"), option.id)
+            }
         }
 
         Check.test("a title with markup in it is escaped in the <title>") {

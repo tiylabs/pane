@@ -1171,7 +1171,7 @@ export function run(view, bar, doc) {
 
   for (const suite of [runUndo, runRenumber, runLayout, runBackspace, runTooltips, runListKinds,
                        runFooterCount, runLinkOpening, runMarkerSelection, runFindSurvives,
-                       runCaretToggles]) {
+                       runCaretToggles, runAccentColours]) {
     const result = suite(view, doc, bar);
     checked += result.checked;
     failures.push(...result.failures);
@@ -1508,5 +1508,34 @@ export function runLinkOpening(view, doc) {
   }
 
   handlers.pane = real;
+  return { checked, failures };
+}
+
+export function runAccentColours(view, doc) {
+  const failures = [];
+  let checked = 0;
+  const check = (name, want, got) => {
+    checked++;
+    if (want !== got) failures.push({ case: name, want, got });
+  };
+
+  // Computed colour exercises the CSS cascade for explicit and system appearance, plus callers
+  // that pass only a custom hex. Inspecting the variable's source text would miss cascade bugs.
+  const accentProbe = doc.createElement("span");
+  accentProbe.style.color = "var(--accent)";
+  doc.body.append(accentProbe);
+  const accentColour = () => getComputedStyle(accentProbe).color;
+  const host = window.paneHost;
+  host.applySettings({ appearance: "light", accent: "#8a570f", accentDark: "#e3b565" });
+  check("accent: light tone", "rgb(138, 87, 15)", accentColour());
+  host.applySettings({ appearance: "dark", accent: "#8a570f", accentDark: "#e3b565" });
+  check("accent: dark tone", "rgb(227, 181, 101)", accentColour());
+  host.applySettings({ appearance: "system", accent: "#8a570f", accentDark: "#e3b565" });
+  check("accent: follows system", matchMedia("(prefers-color-scheme: dark)").matches
+    ? "rgb(227, 181, 101)" : "rgb(138, 87, 15)", accentColour());
+  host.applySettings({ appearance: "dark", accent: "#abc" });
+  check("accent: custom hex clears previous dark tone", "rgb(170, 187, 204)", accentColour());
+  host.applySettings({ appearance: "light", accent: "#8a570f", accentDark: "#e3b565" });
+  accentProbe.remove();
   return { checked, failures };
 }

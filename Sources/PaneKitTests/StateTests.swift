@@ -95,7 +95,7 @@ func runStateTests() {
             Check.expect(!s.showDockIcon, "Pane lives in the menu bar")
             Check.expect(s.showMenuBarIcon)
             Check.equal(s.appearance, Settings.Appearance.system)
-            Check.equal(s.accent, "#c98a1f")
+            Check.equal(s.accent, Settings.defaultAccent)
             Check.equal(s.markdownTheme, "")
             Check.expect(s.translucentPanes)
         }
@@ -134,7 +134,7 @@ func runStateTests() {
             ]
             for bad in bads {
                 let s = try? JSONDecoder().decode(Settings.self, from: Data(bad.utf8))
-                Check.equal(s?.accent, "#c98a1f", "for \(bad)")
+                Check.equal(s?.accent, Settings.defaultAccent, "for \(bad)")
             }
             let short = try? JSONDecoder().decode(
                 Settings.self, from: Data(##"{"accent":"#abc"}"##.utf8)

@@ -2,6 +2,47 @@ import Foundation
 import PaneKit
 
 func runSettingsTests() {
+    Check.suite("Accent palette") {
+        func luminance(_ hex: String) -> Double {
+            let value = UInt32(hex.dropFirst(), radix: 16)!
+            let channels = [value >> 16, (value >> 8) & 255, value & 255].map {
+                let channel = Double($0) / 255
+                return channel <= 0.04045 ? channel / 12.92 : pow((channel + 0.055) / 1.055, 2.4)
+            }
+            return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722
+        }
+
+        func contrast(_ foreground: String, _ background: String) -> Double {
+            let a = luminance(foreground), b = luminance(background)
+            return (max(a, b) + 0.05) / (min(a, b) + 0.05)
+        }
+
+        Check.test("all seven tones remain readable on pane and selected row surfaces") {
+            Check.equal(Settings.accentOptions.count, 7)
+            Check.equal(Set(Settings.accentOptions.map(\.hex)).count, 7)
+            for option in Settings.accentOptions {
+                for background in ["#ffffff", "#f2f2f4", "#e2e2e4"] {
+                    Check.expect(contrast(option.hex, background) >= 4.5, "\(option.id) light on \(background)")
+                }
+                for background in ["#1a1a1c", "#242428", "#26262a", "#353539"] {
+                    Check.expect(contrast(option.darkHex, background) >= 4.5, "\(option.id) dark on \(background)")
+                }
+            }
+        }
+
+        Check.test("old presets resolve to new pairs and custom colours survive") {
+            for (hex, id) in [("#c98a1f", "amber"), ("#5b67d8", "indigo"), ("#2f9e8f", "teal"), ("#6e7480", "graphite")] {
+                let option = Settings.accentOptions.first { $0.id == id }!
+                let colours = Settings.accentColours(for: hex.uppercased())
+                Check.equal(colours.light, option.hex)
+                Check.equal(colours.dark, option.darkHex)
+            }
+            let custom = Settings.accentColours(for: "#abc")
+            Check.equal(custom.light, "#abc")
+            Check.equal(custom.dark, "#abc")
+        }
+    }
+
     Check.suite("Menu key equivalents") {
 
         func check(_ binding: String, _ key: String, _ modifiers: Set<Settings.Modifier>) {

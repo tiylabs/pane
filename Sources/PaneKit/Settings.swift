@@ -223,19 +223,39 @@ public struct Settings: Codable, Equatable, Sendable {
     /// Light and dark both ship in v0.1 (design frame 1f), and the Appearance tab switches them.
     public var appearance: Appearance
 
-    /// The accent, as the hex the web layer's `--accent` wants.
-    ///
-    /// Reserved for interactive state and for list markers (decisions 22 and 28) — never body text.
-    /// Frame 3b offers four; any hex parses, because the value reaches CSS either way and refusing a
-    /// hand-typed colour in a file built to be hand-edited would be pure ceremony.
+    /// The selected accent's light hex, or a custom hex from the hand-editable settings file.
+    /// Reserved for interactive state and list markers (decisions 22 and 28) — never body text.
+    /// Built-in colours resolve to paired light/dark tones; custom colours are kept as supplied.
     public var accent: String
 
-    /// `id` is the catalog key suffix (`accent.<id>`) and `name` the English fallback; screens call
-    /// `Settings.accentName(_:)` for the text a person reads.
-    public static let accentOptions: [(id: String, name: String, hex: String)] = [
-        ("amber", "Amber", "#c98a1f"), ("indigo", "Indigo", "#5b67d8"),
-        ("teal", "Teal", "#2f9e8f"), ("graphite", "Graphite", "#6e7480"),
+    public static let defaultAccent = "#8a570f"
+
+    /// Seven restrained hues. Light tones meet 4.5:1 even on a selected light row (#e2e2e4);
+    /// dark tones meet it on a selected dark row (#353539). Names come from the locale catalog.
+    public static let accentOptions: [(id: String, name: String, hex: String, darkHex: String)] = [
+        ("amber", "Amber", defaultAccent, "#e3b565"),
+        ("rose", "Rose", "#a83d60", "#e991ad"),
+        ("forest", "Forest", "#306d45", "#8ac69c"),
+        ("teal", "Teal", "#146c6e", "#70c4c5"),
+        ("indigo", "Indigo", "#4858b0", "#9eacf0"),
+        ("violet", "Violet", "#794aa5", "#c6a1e8"),
+        ("graphite", "Graphite", "#5c636f", "#acb2bd"),
     ]
+
+    /// Resolve the previous palette without rewriting the user's file. A custom hex still works.
+    public static func accentColours(for hex: String) -> (light: String, dark: String) {
+        let legacyIDs = [
+            "#c98a1f": "amber", "#5b67d8": "indigo",
+            "#2f9e8f": "teal", "#6e7480": "graphite",
+        ]
+        let value = hex.lowercased()
+        if let option = accentOptions.first(where: {
+            $0.hex == value || $0.id == legacyIDs[value]
+        }) {
+            return (option.hex, option.darkHex)
+        }
+        return (hex, hex)
+    }
 
     public static func accentName(_ id: String) -> String { L10n.t("accent.\(id)") }
 
@@ -346,7 +366,7 @@ public struct Settings: Codable, Equatable, Sendable {
         showMenuBarIcon: Bool = true,
         showDockIcon: Bool = false,
         appearance: Appearance = .system,
-        accent: String = "#c98a1f",
+        accent: String = Settings.defaultAccent,
         markdownTheme: String = "",
         noteOrder: NoteOrder = .modified,
         footerCount: FooterCount = .words,

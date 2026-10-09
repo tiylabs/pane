@@ -1381,11 +1381,13 @@ final class PaneController: NSObject {
         // to be told the same thing — otherwise a dark-mode pane gets a light blur behind dark text.
         panel.appearance = settings.value.appearance.nsAppearance
 
+        let accent = Settings.accentColours(for: settings.value.accent)
         editor.call(
             "applySettings",
             [[
                 "appearance": settings.value.appearance.rawValue,
-                "accent": settings.value.accent,
+                "accent": accent.light,
+                "accentDark": accent.dark,
                 "textSize": settings.value.textSize,
                 "footerCount": settings.value.footerCount.rawValue,
                 "translucent": settings.value.translucentPanes,

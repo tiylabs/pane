@@ -131,8 +131,11 @@
   "appearance.material": "材质",
   "appearance.translucent": "半透明面板",
   "accent.amber": "琥珀",
+  "accent.rose": "玫瑰",
+  "accent.forest": "森林绿",
+  "accent.teal": "青碧",
   "accent.indigo": "靛蓝",
-  "accent.teal": "青绿",
+  "accent.violet": "紫罗兰",
   "accent.graphite": "石墨",
 
   "shortcuts.restore": "恢复默认",

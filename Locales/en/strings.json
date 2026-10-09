@@ -132,8 +132,11 @@
   "appearance.material": "Material",
   "appearance.translucent": "Translucent panes",
   "accent.amber": "Amber",
-  "accent.indigo": "Indigo",
+  "accent.rose": "Rose",
+  "accent.forest": "Forest",
   "accent.teal": "Teal",
+  "accent.indigo": "Indigo",
+  "accent.violet": "Violet",
   "accent.graphite": "Graphite",
 
   "shortcuts.restore": "Restore Defaults",

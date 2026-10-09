@@ -1100,6 +1100,7 @@ const host = {
   applySettings(settings: {
     appearance?: string;
     accent?: string;
+    accentDark?: string;
     textSize?: number;
     translucent?: boolean;
     themeCSS?: string;
@@ -1118,7 +1119,10 @@ const host = {
     }
     root.setAttribute("data-vibrancy", settings.translucent === false ? "off" : "on");
     if (settings.textSize) root.style.setProperty("--text-size", `${settings.textSize}px`);
-    if (settings.accent) root.style.setProperty("--accent", settings.accent);
+    if (settings.accent) {
+      root.style.setProperty("--accent-light", settings.accent);
+      root.style.setProperty("--accent-dark", settings.accentDark ?? settings.accent);
+    }
 
     // Decision 19: a theme is a CSS file. Swift reads it and hands over the text; all that happens
     // here is that it goes last in the cascade, after tokens/pane/markdown, so a theme can override

@@ -12,12 +12,13 @@
 
 :root {
   /* ---- Accent -------------------------------------------------------------------------------
-   * Reserved for interactive state only (decision 22). List markers, bullets and body text stay
-   * neutral; the format bar's active button uses a pressed fill, not this. If accent is showing up
-   * in static content, something has gone wrong.
-   * The design offers four: #c98a1f, #5b67d8, #2f9e8f, #6e7480. The picker is deferred with Settings.
+   * Interactive state and list markers (decisions 22 and 28), never body text. Settings supplies
+   * seven paired hues: deeper on light surfaces, softer and lighter on dark surfaces. CSS selects
+   * the tone so system appearance changes also work without another settings message.
    */
-  --accent: #c98a1f;
+  --accent-light: #8a570f;
+  --accent-dark: #e3b565;
+  --accent: var(--accent-light);
 
   /* ---- Material -----------------------------------------------------------------------------
    * Vibrancy on by default. Turning it off swaps blur for a flat opaque background, exactly as the
@@ -248,6 +249,7 @@
  */
 @media (prefers-color-scheme: dark) {
   :root:not([data-appearance="light"]) {
+    --accent: var(--accent-dark);
     --panel-bg: rgba(30, 30, 34, 0.85);
     --overlay-bg: rgba(38, 38, 42, 0.72);
 
@@ -290,6 +292,7 @@
 /* Explicit overrides, so Settings.appearance can force light or dark against the system. Both blocks
  * are needed: the media query above handles "system", these handle a deliberate choice. */
 :root[data-appearance="dark"] {
+  --accent: var(--accent-dark);
   --panel-bg: rgba(30, 30, 34, 0.85);
   --overlay-bg: rgba(38, 38, 42, 0.72);
 
