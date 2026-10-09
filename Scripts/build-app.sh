@@ -13,6 +13,7 @@
 #   Scripts/build-app.sh --dev --release isolated Pane Dev.app with release optimization
 #   Scripts/build-app.sh --universal     arm64 + x86_64, for a release artifact
 #   Scripts/build-app.sh --skip-editor   reuse the existing Editor/dist
+#   Scripts/build-app.sh --binary PATH   assemble and sign a prebuilt binary, skipping Swift build
 #
 #   PANE_SIGN_IDENTITY="Developer ID Application: ..." Scripts/build-app.sh --universal
 #                                        hardened-runtime Developer ID signature, for release
@@ -25,6 +26,7 @@ cd "$ROOT"
 CONFIG=release
 CHANNEL=release
 SKIP_EDITOR=0
+PREBUILT_BIN=
 ARCH_ARGS=()
 
 while [[ $# -gt 0 ]]; do
@@ -34,11 +36,24 @@ while [[ $# -gt 0 ]]; do
 		--release)     CONFIG=release ;;
 		--universal)   ARCH_ARGS=(--arch arm64 --arch x86_64) ;;
 		--skip-editor) SKIP_EDITOR=1 ;;
-		-h|--help)     sed -n '2,23p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+		--binary)
+			if [[ -z "${2:-}" || "$2" == --* ]]; then
+				echo "error: --binary requires a path" >&2
+				exit 2
+			fi
+			PREBUILT_BIN="$2"
+			shift
+			;;
+		-h|--help)     sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
 		*)             echo "unknown flag: $1" >&2; exit 2 ;;
 	esac
 	shift
 done
+
+if [[ -n "$PREBUILT_BIN" && -n "${ARCH_ARGS:+set}" ]]; then
+	echo "error: --binary cannot be combined with --universal" >&2
+	exit 2
+fi
 
 VERSION="${PANE_VERSION:-0.1.0}"
 BUILD_NUMBER="${PANE_BUILD:-$(git rev-list --count HEAD 2>/dev/null || echo 1)}"
@@ -70,10 +85,14 @@ fi
 # /bin/bash is on macOS. It only ever fails where the array is empty — that is, every build without
 # --universal — and never on a machine whose PATH finds a modern bash first, which is why this ran
 # clean here for weeks and failed on CI's first attempt.
-say "Building Pane ($CONFIG${ARCH_ARGS:+, universal})"
-swift build -c "$CONFIG" ${ARCH_ARGS[@]+"${ARCH_ARGS[@]}"} --product Pane
-
-BIN="$(swift build -c "$CONFIG" ${ARCH_ARGS[@]+"${ARCH_ARGS[@]}"} --product Pane --show-bin-path)/Pane"
+if [[ -n "$PREBUILT_BIN" ]]; then
+	say "Using prebuilt Pane binary ($PREBUILT_BIN)"
+	BIN="$PREBUILT_BIN"
+else
+	say "Building Pane ($CONFIG${ARCH_ARGS:+, universal})"
+	swift build -c "$CONFIG" ${ARCH_ARGS[@]+"${ARCH_ARGS[@]}"} --product Pane
+	BIN="$(swift build -c "$CONFIG" ${ARCH_ARGS[@]+"${ARCH_ARGS[@]}"} --product Pane --show-bin-path)/Pane"
+fi
 [[ -f "$BIN" ]] || { echo "error: binary not found at $BIN" >&2; exit 1; }
 
 # ---- 3. bundle layout -------------------------------------------------------------------------
@@ -82,6 +101,8 @@ rm -rf "$APP"
 mkdir -p "$CONTENTS/MacOS" "$CONTENTS/Resources"
 
 cp "$BIN" "$CONTENTS/MacOS/Pane"
+# GitHub artifact downloads reset file modes, including the executable bit.
+chmod +x "$CONTENTS/MacOS/Pane"
 cp -R "$ROOT/Editor/dist/." "$CONTENTS/Resources/Editor/"
 
 # Static bundle resources — currently the menu bar template images. Flat rather than in a

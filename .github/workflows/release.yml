@@ -15,9 +15,11 @@ permissions:
   contents: write
 
 jobs:
-  release:
+  test:
     if: github.event_name == 'push'
     runs-on: macos-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v5
 
@@ -49,6 +51,81 @@ jobs:
           Scripts/test-markdown.sh --skip-editor
           Scripts/test-switcher.sh --skip-editor
           Scripts/test-tooltip.sh --skip-editor
+
+      - name: Upload the tested editor bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: pane-editor
+          path: Editor/dist/
+          if-no-files-found: error
+          retention-days: 1
+
+  # Each architecture gets its own runner and SwiftPM build directory. Tests run alongside them;
+  # only the final job needs all three to succeed before signing and publishing anything.
+  build:
+    if: github.event_name == 'push'
+    runs-on: macos-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: true
+      matrix:
+        arch: [arm64, x86_64]
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build Pane (${{ matrix.arch }})
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: |
+          set -euo pipefail
+          swift build -c release --arch "$ARCH" --product Pane
+          BIN="$(swift build -c release --arch "$ARCH" --product Pane --show-bin-path)/Pane"
+          lipo "$BIN" -verify_arch "$ARCH"
+          mkdir -p "build/$ARCH"
+          cp "$BIN" "build/$ARCH/Pane"
+
+      - name: Upload the architecture binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: pane-${{ matrix.arch }}
+          path: build/${{ matrix.arch }}/Pane
+          if-no-files-found: error
+          retention-days: 1
+
+  release:
+    if: github.event_name == 'push'
+    needs: [test, build]
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Download the tested editor bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: pane-editor
+          path: Editor/dist
+
+      - name: Download the arm64 binary
+        uses: actions/download-artifact@v4
+        with:
+          name: pane-arm64
+          path: build/arm64
+
+      - name: Download the x86_64 binary
+        uses: actions/download-artifact@v4
+        with:
+          name: pane-x86_64
+          path: build/x86_64
+
+      - name: Merge the universal binary
+        run: |
+          set -euo pipefail
+          lipo -create build/arm64/Pane build/x86_64/Pane -output build/Pane
+          lipo build/Pane -verify_arch arm64
+          lipo build/Pane -verify_arch x86_64
+          # Artifact downloads do not preserve executable permissions.
+          chmod +x build/Pane
 
       - name: Version from the tag
         id: version
@@ -100,10 +177,10 @@ jobs:
           echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> "$GITHUB_ENV"
           echo "PANE_SIGN_IDENTITY=$IDENTITY" >> "$GITHUB_ENV"
 
-      - name: Build Pane.app (universal, Developer ID signed)
+      - name: Assemble Pane.app (universal, Developer ID signed)
         env:
           PANE_VERSION: ${{ steps.version.outputs.version }}
-        run: Scripts/build-app.sh --universal
+        run: Scripts/build-app.sh --skip-editor --binary build/Pane
 
       # Notarize the app before it goes into the image, so the ticket is stapled to the bundle the
       # user drags out and it opens offline. The image is notarized again below.
