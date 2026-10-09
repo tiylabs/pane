@@ -167,7 +167,7 @@ public struct Hotkey: Codable, Equatable, Sendable, CustomStringConvertible {
     /// the user their custom hotkey, not the ability to launch the app.
     public init(from decoder: any Decoder) throws {
         let raw = try decoder.singleValueContainer().decode(String.self)
-        self = (try? Hotkey.parse(raw)) ?? .defaultSummon
+        self = (try? Hotkey.parse(raw)) ?? BuildProfile.current.defaultSummonHotkey
     }
 
     public func encode(to encoder: any Encoder) throws {

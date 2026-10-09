@@ -77,6 +77,7 @@ final class GeneralSettingsViewController: NSViewController {
         let login = SettingsForm.toggle(
             current.launchAtLogin, target: self, action: #selector(launchAtLoginChanged)
         )
+        login.isEnabled = BuildProfile.current.allowsSystemIntegration
         let menuBar = SettingsForm.toggle(
             current.showMenuBarIcon, target: self, action: #selector(showMenuBarIconChanged)
         )
@@ -92,6 +93,8 @@ final class GeneralSettingsViewController: NSViewController {
         let updates = SettingsForm.toggle(
             current.checkForUpdates, target: self, action: #selector(checkForUpdatesChanged)
         )
+
+        updates.isEnabled = BuildProfile.current.allowsSystemIntegration
 
         // Behaviour, not appearance, so it is here rather than in Appearance: it changes which note
         // ⌘P puts under your finger, which is the same kind of question as how the pane is dismissed.

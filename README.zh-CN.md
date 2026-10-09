@@ -102,8 +102,12 @@ Pane 不会去申请任何系统权限，没有统计，没有账号，也没有
 
 ```bash
 Scripts/test-all.sh
-Scripts/build-app.sh --debug
+make dev                      # 编译并启动独立的开发版 build/Pane Dev.app
+Scripts/build-app.sh --release # 构建正式版 build/Pane.app
 ```
+
+开发版使用独立的应用标识和设置，笔记默认存放在 app 同级的 `build/Pane-scratch`，
+`make clean` 会保留这些笔记。默认快捷键为 `⌃⌥⇧Space`，不会退出已运行的正式版。
 
 更多内容见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 

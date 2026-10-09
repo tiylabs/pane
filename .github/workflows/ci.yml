@@ -63,6 +63,7 @@ jobs:
           set -euo pipefail
           APP=build/Pane.app
           test -x "$APP/Contents/MacOS/Pane"
+          test "$(plutil -extract CFBundleIdentifier raw "$APP/Contents/Info.plist")" = "com.tiylabs.pane"
           test -f "$APP/Contents/Resources/Editor/index.html"
           test -f "$APP/Contents/Resources/AppIcon.icns"
           test -f "$APP/Contents/Resources/MenuBar@2x.png"
@@ -84,3 +85,8 @@ jobs:
             echo "error: a release bundle is stamped as a scratch build — see decision 99" >&2
             exit 1
           fi
+
+      - name: Verify development isolation
+        run: |
+          Scripts/build-app.sh --debug --skip-editor
+          Scripts/test-dev-isolation.sh

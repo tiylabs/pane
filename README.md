@@ -164,7 +164,8 @@ Command Line Tools alone.
 
 ```bash
 Scripts/test-all.sh            # every test suite, against one bundle build
-Scripts/build-app.sh --debug   # assemble build/Pane.app
+make dev                      # rebuild and launch the isolated build/Pane Dev.app
+Scripts/build-app.sh --release # assemble the release build/Pane.app
 ```
 
 Swift + AppKit owns the panel, hotkey and file I/O; the editor is CodeMirror 6 in a `WKWebView`.

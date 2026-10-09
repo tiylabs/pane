@@ -9,7 +9,8 @@
 # rewriting the bundle invalidates the signature SwiftPM applied).
 #
 #   Scripts/build-app.sh                 release build for the host architecture
-#   Scripts/build-app.sh --debug         debug build, faster, for iterating
+#   Scripts/build-app.sh --debug         isolated Pane Dev.app, faster, for iterating
+#   Scripts/build-app.sh --dev --release isolated Pane Dev.app with release optimization
 #   Scripts/build-app.sh --universal     arm64 + x86_64, for a release artifact
 #   Scripts/build-app.sh --skip-editor   reuse the existing Editor/dist
 #
@@ -22,12 +23,14 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
 CONFIG=release
+CHANNEL=release
 SKIP_EDITOR=0
 ARCH_ARGS=()
 
 while [[ $# -gt 0 ]]; do
 	case "$1" in
-		--debug)       CONFIG=debug ;;
+		--debug)       CONFIG=debug; CHANNEL=dev ;;
+		--dev)         CHANNEL=dev ;;
 		--release)     CONFIG=release ;;
 		--universal)   ARCH_ARGS=(--arch arm64 --arch x86_64) ;;
 		--skip-editor) SKIP_EDITOR=1 ;;
@@ -40,7 +43,9 @@ done
 VERSION="${PANE_VERSION:-0.1.0}"
 BUILD_NUMBER="${PANE_BUILD:-$(git rev-list --count HEAD 2>/dev/null || echo 1)}"
 
-APP="$ROOT/build/Pane.app"
+APP_NAME=Pane
+[[ "$CHANNEL" == "dev" ]] && APP_NAME="Pane Dev"
+APP="$ROOT/build/$APP_NAME.app"
 CONTENTS="$APP/Contents"
 
 say() { printf '\033[1m==>\033[0m %s\n' "$*"; }
@@ -122,22 +127,21 @@ if [[ -d "$ROOT/Locales" ]]; then
 	done
 fi
 
-# A debug build is a scratch build: its own Application Support folder, and a vault default of
-# ~/Pane-scratch rather than ~/Documents/Pane. See PaneKit/BuildProfile.swift for why — in short,
-# the two builds shared one settings.json, so pointing the debug one at a scratch vault repointed
-# the daily one with it, and every scripted keystroke landed in real notes.
-#
-# Stamped here rather than read from an environment variable, because `open build/Pane.app` does not
-# carry the environment and a rule that only holds when you remember to export something is not a
-# rule. --release never gets the key, so a release bundle cannot come out of this script scratched.
-if [[ "$CONFIG" == "debug" ]]; then
-	/usr/libexec/PlistBuddy -c "Add :PaneScratchBuild bool true" "$CONTENTS/Info.plist" >/dev/null
+# The channel is stamped into the bundle; inherited environment cannot redirect its settings.
+# A dev channel can use release optimization without taking the installed app's identity or data.
+if [[ "$CHANNEL" == "dev" ]]; then
+	/usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.tiylabs.pane.dev" "$CONTENTS/Info.plist"
+	/usr/libexec/PlistBuddy -c "Set :CFBundleName Pane Dev" "$CONTENTS/Info.plist"
+	/usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string Pane Dev" "$CONTENTS/Info.plist"
+	/usr/libexec/PlistBuddy -c "Add :PaneScratchBuild bool true" "$CONTENTS/Info.plist"
 fi
 
 printf 'APPL????' > "$CONTENTS/PkgInfo"
 
-if [[ -f "$ROOT/Scripts/AppIcon.icns" ]]; then
-	cp "$ROOT/Scripts/AppIcon.icns" "$CONTENTS/Resources/AppIcon.icns"
+ICON="$ROOT/Scripts/AppIcon.icns"
+[[ "$CHANNEL" == "dev" ]] && ICON="$ROOT/Scripts/AppIcon-dev.icns"
+if [[ -f "$ICON" ]]; then
+	cp "$ICON" "$CONTENTS/Resources/AppIcon.icns"
 	/usr/libexec/PlistBuddy -c "Add :CFBundleIconFile string AppIcon" "$CONTENTS/Info.plist" >/dev/null
 fi
 

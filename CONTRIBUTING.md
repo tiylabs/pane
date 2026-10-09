@@ -88,7 +88,9 @@ Scripts/test-switcher.sh       # the two overlays, measured as rectangles
 Scripts/test-tooltip.sh        # when a control names itself, and after how long
 Scripts/test-keyboard.sh       # the keyboard tables, in plain node
 Scripts/test-all.sh            # every suite above, against one bundle build
-Scripts/build-app.sh --debug   # assemble build/Pane.app
+make dev                      # safely restart this checkout's build/Pane Dev.app
+Scripts/build-app.sh --release # assemble build/Pane.app (release identity)
+Scripts/build-app.sh --dev --release # optimized build/Pane Dev.app (dev identity)
 ```
 
 **Run every suite after touching anything in `Editor/src`** (`Scripts/test-all.sh` does it in one go).
@@ -108,9 +110,37 @@ Two things about the layout worth knowing:
   lands on disk is byte-for-byte what was typed. A change that makes the document a richer
   structure than the file is a change to the premise.
 
-`Scripts/build-app.sh --debug` stamps the bundle as a scratch build, which gives it its own
-application support directory and a vault default of `~/Pane-scratch` — so a debug session cannot
-reach your real notes or settings.
+`make dev` normally quits only this checkout's development app, waits for its notes to flush,
+then builds and opens `build/Pane Dev.app`. It never kills an installed release by process name.
+`Scripts/build-app.sh --debug` selects the development identity; `--dev --release` keeps that
+identity with release optimization. The default build and `--release` alone remain the shipped
+`build/Pane.app`, with no development environment variable or setting involved.
+
+| | Release | Development |
+| --- | --- | --- |
+| Bundle ID | `com.tiylabs.pane` | `com.tiylabs.pane.dev` |
+| Application Support | `Pane` | `Pane (Debug)` |
+| Default vault | `~/Documents/Pane` | `build/Pane-scratch` beside `Pane Dev.app` |
+| iCloud vault | `…/CloudDocs/Pane` | `…/CloudDocs/Pane-scratch` |
+| Default summon hotkey | `⌃⌥Space` | `⌃⌥⇧Space` |
+
+Development builds have a DEV-badged app icon and a hammer menu-bar icon. They do not register a
+login item or perform daily update checks; the About tab's manual check remains available. Existing
+development settings keep custom vaults and hotkeys, except the old shared `⌃⌥Space` is migrated
+to the development default. The development vault's default is an absolute path derived from the
+app's parent directory, independent of the launch working directory. On first launch with the old
+`~/Pane-scratch` default, its entire folder is copied beside the app and the original is retained;
+an existing destination, missing source or copy failure leaves the old path intact. Release settings
+are never migrated or written by that process. Do not manually point both apps at the same vault
+or assign them the same global hotkey.
+
+`make clean` removes build products while preserving `build/Pane-scratch`, including hidden notes.
+If the checkout is under Documents, macOS may ask the development app for folder access. Moving
+the checkout does not rewrite an existing saved custom/absolute vault path; use Storage settings
+to adopt its new location.
+
+Run `Scripts/test-dev-isolation.sh` after building both bundles to verify their identities, defaults,
+resources, and safe restart selection. The release packaging script refuses development bundles.
 
 ## Translations
 

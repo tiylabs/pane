@@ -30,8 +30,10 @@ say() { printf '\033[1m==>\033[0m %s\n' "$*"; }
 
 # A release bundle must not be stamped as a scratch build — same guard as the release workflow, here
 # too because this script is the last thing to touch the bundle before somebody downloads it.
-if /usr/libexec/PlistBuddy -c "Print :PaneScratchBuild" "$APP/Contents/Info.plist" >/dev/null 2>&1; then
-	echo "error: $APP is a scratch build (PaneScratchBuild is set) — rebuild without --debug" >&2
+BUNDLE_ID="$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$APP/Contents/Info.plist")"
+if [[ "$BUNDLE_ID" != "com.tiylabs.pane" ]] || \
+	/usr/libexec/PlistBuddy -c "Print :PaneScratchBuild" "$APP/Contents/Info.plist" >/dev/null 2>&1; then
+	echo "error: $APP is not a release bundle — rebuild with --release and without --dev/--debug" >&2
 	exit 1
 fi
 

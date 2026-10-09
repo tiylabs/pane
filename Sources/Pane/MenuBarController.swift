@@ -30,7 +30,9 @@ final class MenuBarController: NSObject {
 
         if let button = item.button {
             button.image = Self.statusImage
-            button.toolTip = tr("menubar.tooltip", ["hotkey": hotkey.displayString])
+            button.toolTip = BuildProfile.current == .scratch
+                ? "\(BuildProfile.current.displayName) — \(hotkey.displayString)"
+                : tr("menubar.tooltip", ["hotkey": hotkey.displayString])
             button.target = self
             button.action = #selector(clicked)
             // Both buttons, or the action fires on the left one only and a right-click does nothing
@@ -201,11 +203,15 @@ final class MenuBarController: NSObject {
     /// Falls back to an SF Symbol when the resource is absent, which is the case for `swift run Pane`
     /// during development: `NSImage(named:)` reads the app bundle, and there isn't one.
     private static let statusImage: NSImage? = {
-        let image = NSImage(named: "MenuBar")
-            ?? NSImage(systemSymbolName: "note.text", accessibilityDescription: "Pane")
+        let image: NSImage?
+        if BuildProfile.current == .scratch {
+            image = NSImage(systemSymbolName: "hammer", accessibilityDescription: "Pane Dev")
+        } else {
+            image = NSImage(named: "MenuBar")
+                ?? NSImage(systemSymbolName: "note.text", accessibilityDescription: "Pane")
+        }
         image?.isTemplate = true
-        // "Pane" is the product's name and reads the same in every language.
-        image?.accessibilityDescription = "Pane"
+        image?.accessibilityDescription = BuildProfile.current.displayName
         return image
     }()
 

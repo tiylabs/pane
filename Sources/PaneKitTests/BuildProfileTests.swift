@@ -4,6 +4,64 @@ import PaneKit
 func runBuildProfileTests() {
     Check.suite("Build profile") {
 
+        Check.test("release identity and defaults remain unchanged") {
+            let release = BuildProfile.release
+            Check.equal(release.bundleIdentifier, "com.tiylabs.pane")
+            Check.equal(release.displayName, "Pane")
+            Check.equal(release.supportDirectoryName, "Pane")
+            Check.equal(release.defaultVaultPath, "~/Documents/Pane")
+            Check.equal(release.defaultSummonHotkey, Hotkey.defaultSummon)
+            Check.expect(release.allowsSystemIntegration)
+            Check.equal(Settings().checkForUpdates, true)
+            Check.equal(Settings().launchAtLogin, false)
+        }
+
+        Check.test("dev identity and hotkey are independent of release") {
+            let dev = BuildProfile.scratch
+            Check.notEqual(dev.bundleIdentifier, BuildProfile.release.bundleIdentifier)
+            Check.equal(dev.displayName, "Pane Dev")
+            Check.equal(dev.defaultSummonHotkey.settingsString, "control+option+shift+space")
+            Check.notEqual(dev.defaultSummonHotkey, Hotkey.defaultSummon)
+            Check.expect(!dev.allowsSystemIntegration)
+        }
+
+        Check.test("bundle identity or legacy scratch flag selects development") {
+            Check.equal(BuildProfile.resolve(bundleIdentifier: "com.tiylabs.pane.dev", scratchFlag: false), .scratch)
+            Check.equal(BuildProfile.resolve(bundleIdentifier: "com.tiylabs.pane", scratchFlag: true), .scratch)
+            Check.equal(BuildProfile.resolve(bundleIdentifier: "com.tiylabs.pane", scratchFlag: false), .release)
+            Check.equal(BuildProfile.resolve(bundleIdentifier: nil, scratchFlag: false), .release)
+        }
+
+        Check.test("fallback paths preserve the same isolation as normal paths") {
+            let home = URL(fileURLWithPath: "/test-home")
+            Check.equal(BuildProfile.release.fallbackSupportDirectory(homeDirectory: home).path,
+                        "/test-home/Library/Application Support/Pane")
+            Check.equal(BuildProfile.scratch.fallbackSupportDirectory(homeDirectory: home).path,
+                        "/test-home/Library/Application Support/Pane (Debug)")
+        }
+
+        Check.test("development settings migration cannot change release settings") {
+            var settings = Settings(vaultPath: "~/CustomNotes", launchAtLogin: true, checkForUpdates: true)
+            let original = settings
+            settings.isolateDevelopmentSettings(profile: .release)
+            Check.equal(settings, original)
+            settings.isolateDevelopmentSettings(profile: .scratch)
+            Check.equal(settings.vaultPath, original.vaultPath)
+            Check.equal(settings.summonHotkey, BuildProfile.scratch.defaultSummonHotkey)
+            Check.expect(!settings.launchAtLogin)
+            Check.expect(!settings.checkForUpdates)
+            let migrated = settings
+            settings.isolateDevelopmentSettings(profile: .scratch)
+            Check.equal(settings, migrated)
+        }
+
+        Check.test("development migration preserves custom hotkeys") {
+            guard let custom = try? Hotkey.parse("command+shift+p") else { return }
+            var settings = Settings(summonHotkey: custom)
+            settings.isolateDevelopmentSettings(profile: .scratch)
+            Check.equal(settings.summonHotkey, custom)
+        }
+
         // The point of these is not that the strings are right — they are two lines of code. It is
         // that the two profiles can never *collide*, because the whole reason this type exists is
         // that they used to share one settings.json and a debug session repointed the daily build's
@@ -70,15 +128,86 @@ func runBuildProfileTests() {
             }
         }
 
-        // Ad-hoc signing gives every rebuild a new cdhash and TCC keys consent to the binary, so a
-        // scratch vault under ~/Documents re-asks for the Documents folder on every build — and
-        // while that prompt is up the app reads and writes nothing, which presents as the app
-        // ignoring every keystroke rather than as a permission dialog.
-        Check.test("the scratch vault is outside ~/Documents") {
-            Check.expect(
-                !BuildProfile.scratch.defaultVaultPath.hasPrefix("~/Documents"),
-                "got \(BuildProfile.scratch.defaultVaultPath)"
-            )
+        Check.test("development notes are an absolute sibling of the app") {
+            let app = URL(fileURLWithPath: "/checkout/build/Pane Dev.app")
+            Check.equal(BuildProfile.scratch.defaultVaultPath(bundleURL: app), "/checkout/build/Pane-scratch")
+            Check.equal(BuildProfile.release.defaultVaultPath(bundleURL: app), "~/Documents/Pane")
+            let other = URL(fileURLWithPath: "/other checkout/build/Pane Dev.app")
+            Check.equal(BuildProfile.scratch.defaultVaultPath(bundleURL: other),
+                        "/other checkout/build/Pane-scratch")
+            Check.equal(BuildProfile.scratch.defaultVaultPath(bundleURL: URL(fileURLWithPath: "/probe")),
+                        "~/Pane-scratch")
+        }
+
+        Check.test("legacy development notes are copied intact and the source is retained") {
+            let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+            defer { try? FileManager.default.removeItem(at: root) }
+            do {
+                let home = root.appendingPathComponent("home")
+                let legacy = home.appendingPathComponent("Pane-scratch")
+                try FileManager.default.createDirectory(at: legacy, withIntermediateDirectories: true)
+                try Data("# Old scratch note".utf8).write(to: legacy.appendingPathComponent("note.md"))
+                let app = root.appendingPathComponent("build/Pane Dev.app")
+                var settings = Settings(vaultPath: "~/Pane-scratch")
+                try settings.migrateDevelopmentVault(profile: .scratch, bundleURL: app, homeDirectory: home)
+                Check.equal(settings.vaultPath, root.appendingPathComponent("build/Pane-scratch").path)
+                Check.equal(try String(contentsOf: settings.vaultURL.appendingPathComponent("note.md"), encoding: .utf8),
+                            "# Old scratch note")
+                Check.expect(FileManager.default.fileExists(atPath: legacy.appendingPathComponent("note.md").path))
+                // A repeat neither overwrites the new note nor recopies a modified legacy source.
+                try Data("# Changed legacy".utf8).write(to: legacy.appendingPathComponent("note.md"))
+                try settings.migrateDevelopmentVault(profile: .scratch, bundleURL: app, homeDirectory: home)
+                Check.equal(try String(contentsOf: settings.vaultURL.appendingPathComponent("note.md"), encoding: .utf8),
+                            "# Old scratch note")
+            } catch { Check.expect(false, "migration failed: \(error)") }
+        }
+
+        Check.test("migration preserves existing destinations, custom paths and release settings") {
+            let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+            defer { try? FileManager.default.removeItem(at: root) }
+            do {
+                let home = root.appendingPathComponent("home")
+                let legacy = home.appendingPathComponent("Pane-scratch")
+                let destination = root.appendingPathComponent("build/Pane-scratch")
+                try FileManager.default.createDirectory(at: legacy, withIntermediateDirectories: true)
+                try FileManager.default.createDirectory(at: destination, withIntermediateDirectories: true)
+                try Data("# Existing destination".utf8).write(to: destination.appendingPathComponent("note.md"))
+                let app = root.appendingPathComponent("build/Pane Dev.app")
+                var settings = Settings(vaultPath: legacy.path)
+                try settings.migrateDevelopmentVault(profile: .scratch, bundleURL: app, homeDirectory: home)
+                Check.equal(settings.vaultPath, legacy.path)
+                Check.equal(try String(contentsOf: destination.appendingPathComponent("note.md"), encoding: .utf8),
+                            "# Existing destination")
+                settings.vaultPath = "~/CustomNotes"
+                try settings.migrateDevelopmentVault(profile: .scratch, bundleURL: app, homeDirectory: home)
+                Check.equal(settings.vaultPath, "~/CustomNotes")
+                settings.vaultPath = "~/Pane-scratch"
+                try settings.migrateDevelopmentVault(profile: .release, bundleURL: app, homeDirectory: home)
+                Check.equal(settings.vaultPath, "~/Pane-scratch")
+            } catch { Check.expect(false, "migration checks failed: \(error)") }
+        }
+
+        Check.test("missing or failed legacy migration leaves settings untouched") {
+            let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+            defer { try? FileManager.default.removeItem(at: root) }
+            do {
+                let home = root.appendingPathComponent("home")
+                let app = root.appendingPathComponent("build/Pane Dev.app")
+                var settings = Settings(vaultPath: "~/Pane-scratch")
+                try settings.migrateDevelopmentVault(profile: .scratch, bundleURL: app, homeDirectory: home)
+                Check.equal(settings.vaultPath, "~/Pane-scratch")
+                let legacy = home.appendingPathComponent("Pane-scratch")
+                try FileManager.default.createDirectory(at: legacy, withIntermediateDirectories: true)
+                try Data("# Retained".utf8).write(to: legacy.appendingPathComponent("note.md"))
+                try Data("blocks parent creation".utf8).write(to: root.appendingPathComponent("build"))
+                do {
+                    try settings.migrateDevelopmentVault(profile: .scratch, bundleURL: app, homeDirectory: home)
+                    Check.expect(false, "migration should fail when the parent is a file")
+                } catch {
+                    Check.equal(settings.vaultPath, "~/Pane-scratch")
+                    Check.expect(FileManager.default.fileExists(atPath: legacy.appendingPathComponent("note.md").path))
+                }
+            } catch { Check.expect(false, "fixture setup failed: \(error)") }
         }
 
         // A test binary, a probe and anything else without the Info.plist key is a release build.

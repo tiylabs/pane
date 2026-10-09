@@ -1,6 +1,6 @@
 // T1, driven — decision 143.
 //
-// Drives the *debug* build (build/Pane.app, decision 99) through the accessibility API and the
+// Drives the *debug* build (build/Pane Dev.app, decision 99) through the accessibility API and the
 // event tap, and reads every result off the file, never the screen. What it covers is the part of
 // T1 that a file can verify: the write model, the filename rules, external edits, undo, the keys
 // that write bytes. What it does not cover stays by hand: the typing script, anything about
@@ -9,7 +9,7 @@
 // Run:  swift Scripts/smoke/t1.swift            # every item
 //       swift Scripts/smoke/t1.swift caret fence  # by name
 //
-// Needs: the debug build running (Scripts/build-app.sh --debug && open build/Pane.app), the
+// Needs: the debug build running (make dev), the
 // terminal trusted for Accessibility, and nothing else claiming the debug hotkey. Notes it makes
 // are moved to ~/.trash-t1-<date> at the end (--keep leaves them).
 //
@@ -38,21 +38,26 @@ func check(_ item: String, _ name: String, _ pass: Bool, _ detail: String = "") 
 
 // MARK: - The app
 
-let debugApp = "/Users/colemei/01.code/apps/mydeveloper/pane/build/Pane.app"
+let projectRoot = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+    .deletingLastPathComponent().deletingLastPathComponent()
+let debugApp = projectRoot.appendingPathComponent("build/Pane Dev.app").standardizedFileURL.path
 let support = NSHomeDirectory() + "/Library/Application Support/Pane (Debug)"
 let settings = try! JSONSerialization.jsonObject(with: Data(contentsOf: URL(fileURLWithPath: support + "/settings.json"))) as! [String: Any]
-let vault = NSString(string: (settings["vaultPath"] as? String) ?? "~/Pane-scratch").expandingTildeInPath
+let defaultVault = projectRoot.appendingPathComponent("build/Pane-scratch").path
+let vault = NSString(string: (settings["vaultPath"] as? String) ?? defaultVault).expandingTildeInPath
 let recentlyDeleted = support + "/Recently Deleted"
 
-guard let app = NSWorkspace.shared.runningApplications.first(where: { $0.bundleURL?.path == debugApp }) else {
-    print("The debug build is not running: Scripts/build-app.sh --debug && open build/Pane.app"); exit(2)
+guard let app = NSWorkspace.shared.runningApplications.first(where: {
+    $0.bundleURL?.standardizedFileURL.path == debugApp && $0.bundleIdentifier == "com.tiylabs.pane.dev"
+}) else {
+    print("The debug build is not running: make dev"); exit(2)
 }
 let pid = app.processIdentifier
 guard AXIsProcessTrusted() else { print("This terminal is not trusted for Accessibility."); exit(2) }
 
 var hotkeyFlags: CGEventFlags = []
 do {
-    let spec = ((settings["summonHotkey"] as? String) ?? "control+option+space").lowercased()
+    let spec = ((settings["summonHotkey"] as? String) ?? "control+option+shift+space").lowercased()
     if spec.contains("control") || spec.contains("ctrl") { hotkeyFlags.insert(.maskControl) }
     if spec.contains("option") || spec.contains("alt") { hotkeyFlags.insert(.maskAlternate) }
     if spec.contains("shift") { hotkeyFlags.insert(.maskShift) }

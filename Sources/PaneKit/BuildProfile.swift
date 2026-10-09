@@ -11,8 +11,8 @@ import Foundation
 /// the one direction nobody was watching, because it is a development path rather than a user one.
 ///
 /// So a scratch build gets its own everything. It is not a mode the app switches into at runtime;
-/// it is stamped into `Info.plist` by `Scripts/build-app.sh --debug` and read once, which means it
-/// cannot be turned on by accident and cannot be turned off by a stale setting.
+/// its identity is stamped into `Info.plist` by `Scripts/build-app.sh --debug` (or `--dev`) and read
+/// once, so inherited environment and stale settings cannot change its channel.
 ///
 /// **This is the second reason to keep the two apart, and the first one is already in the record:**
 /// "test against a scratch vault, never the real one — synthetic input into a pane that is showing a
@@ -23,24 +23,55 @@ public enum BuildProfile: Sendable, Equatable {
     /// A release build: `~/Library/Application Support/Pane`, vault defaults to `~/Documents/Pane`.
     case release
 
-    /// A debug build: its own support folder, and a vault outside `~/Documents`.
-    ///
-    /// Outside `~/Documents` on purpose. Ad-hoc signing gives every rebuild a new cdhash and TCC
-    /// keys consent to the binary, so a debug build under `~/Documents` re-triggers the
-    /// Documents-folder prompt on every build — and while that prompt is up the app reads and writes
-    /// nothing, which presents as the app ignoring every keystroke rather than as a permission
-    /// dialog. `~/Pane-scratch` never meets it.
+    /// A development build: its own support folder and a vault beside the app bundle.
+    /// A checkout under Documents may need macOS folder-access consent; custom vaults still work.
     case scratch
 
-    /// The `Info.plist` key `Scripts/build-app.sh --debug` stamps.
+    /// Kept for older scratch bundles and the packaging guard that rejects development builds.
     public static let infoKey = "PaneScratchBuild"
 
-    /// Resolved once from the bundle. A test harness or a probe has no such key and is `.release`,
-    /// which is what keeps `PaneKitTests` free of any opinion about where this machine keeps things.
-    public static let current: BuildProfile = {
-        let flagged = Bundle.main.object(forInfoDictionaryKey: infoKey) as? Bool ?? false
-        return flagged ? .scratch : .release
-    }()
+    public static let current = resolve(
+        bundleIdentifier: Bundle.main.bundleIdentifier,
+        scratchFlag: Bundle.main.object(forInfoDictionaryKey: infoKey) as? Bool ?? false
+    )
+
+    public static func resolve(bundleIdentifier: String?, scratchFlag: Bool) -> BuildProfile {
+        if bundleIdentifier == BuildProfile.scratch.bundleIdentifier || scratchFlag { return .scratch }
+        return .release
+    }
+
+    public var bundleIdentifier: String {
+        switch self {
+        case .release: "com.tiylabs.pane"
+        case .scratch: "com.tiylabs.pane.dev"
+        }
+    }
+
+    public var displayName: String {
+        switch self {
+        case .release: "Pane"
+        case .scratch: "Pane Dev"
+        }
+    }
+
+    public var defaultSummonHotkey: Hotkey {
+        switch self {
+        case .release: .defaultSummon
+        case .scratch: Hotkey(keyCode: KeyCode.space, modifiers: [.control, .option, .shift])
+        }
+    }
+
+    /// A dev app never registers a login item or announces releases while being summoned.
+    /// Manual update checks remain available for testing the About tab.
+    public var allowsSystemIntegration: Bool { self == .release }
+
+    /// The error path must stay in the same profile as the normal Application Support lookup.
+    public func fallbackSupportDirectory(
+        homeDirectory: URL = FileManager.default.homeDirectoryForCurrentUser
+    ) -> URL {
+        homeDirectory.appendingPathComponent("Library/Application Support", isDirectory: true)
+            .appendingPathComponent(supportDirectoryName, isDirectory: true)
+    }
 
     /// The folder under Application Support. Named so the two are told apart in the Finder at a
     /// glance, which matters the first time you go looking for which `state.json` you just broke.
@@ -53,10 +84,17 @@ public enum BuildProfile: Sendable, Equatable {
 
     /// Where a fresh install puts the vault. Only ever a *default* — once `settings.json` exists it
     /// carries the answer, and the Storage tab can move it (decision 30).
-    public var defaultVaultPath: String {
+    public var defaultVaultPath: String { defaultVaultPath(bundleURL: Bundle.main.bundleURL) }
+
+    /// An absolute sibling path does not depend on the working directory LaunchServices chose.
+    /// Bare probes have no .app beside which to keep notes, so they retain the old safe fallback.
+    public func defaultVaultPath(bundleURL: URL) -> String {
         switch self {
-        case .release: "~/Documents/Pane"
-        case .scratch: "~/Pane-scratch"
+        case .release: return "~/Documents/Pane"
+        case .scratch:
+            guard bundleURL.pathExtension == "app" else { return "~/Pane-scratch" }
+            return bundleURL.deletingLastPathComponent()
+                .appendingPathComponent("Pane-scratch", isDirectory: true).standardizedFileURL.path
         }
     }
 

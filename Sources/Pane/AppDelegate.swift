@@ -407,6 +407,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// upgrading clear it immediately: the file still says `v0.6.6` on the first launch of v0.6.6,
     /// and `ReleaseCheck.status` answers `.current`, so nothing is shown and the value is cleared.
     private var latestAvailableVersion: String? {
+        guard BuildProfile.current.allowsSystemIntegration else { return nil }
         guard let stored = state.value.availableUpdate else { return nil }
         guard case .behind(let version) = ReleaseCheck.status(
             current: UpdateChecker.runningVersion, latest: stored
@@ -427,6 +428,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// item and the dot** are the part that waits, and they are derived from the comparison rather
     /// than from a flag, so they cannot be stale.
     private func checkForUpdateIfDue() {
+        guard BuildProfile.current.allowsSystemIntegration else { return }
         guard ReleaseCheck.shouldCheck(
             enabled: settings.value.checkForUpdates,
             lastChecked: state.value.lastUpdateCheck
@@ -503,6 +505,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Login item
 
     private func applyLaunchAtLogin() {
+        guard BuildProfile.current.allowsSystemIntegration else { return }
         do {
             switch (settings.value.launchAtLogin, SMAppService.mainApp.status) {
             case (true, .enabled), (false, .notRegistered), (false, .notFound):

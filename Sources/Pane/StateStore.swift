@@ -26,8 +26,7 @@ final class StateStore {
     init() {
         let store = (try? JSONFileStore<AppState>.inApplicationSupport("state.json"))
             ?? JSONFileStore<AppState>(
-                url: URL(fileURLWithPath: NSHomeDirectory())
-                    .appendingPathComponent("Library/Application Support/Pane/state.json")
+                url: BuildProfile.current.fallbackSupportDirectory().appendingPathComponent("state.json")
             )
         self.store = store
         (value, loadOutcome) = store.load(default: AppState())
@@ -86,16 +85,24 @@ final class SettingsStore {
     init() {
         let store = (try? JSONFileStore<Settings>.inApplicationSupport("settings.json"))
             ?? JSONFileStore<Settings>(
-                url: URL(fileURLWithPath: NSHomeDirectory())
-                    .appendingPathComponent("Library/Application Support/Pane/settings.json")
+                url: BuildProfile.current.fallbackSupportDirectory().appendingPathComponent("settings.json")
             )
         self.store = store
-        let (value, outcome) = store.load(default: Settings())
+        let (loaded, outcome) = store.load(default: Settings())
+        var value = loaded
+        value.isolateDevelopmentSettings()
+        if outcome == .loaded {
+            do {
+                try value.migrateDevelopmentVault()
+            } catch {
+                NSLog("Pane Dev: could not migrate the old scratch vault; keeping %@ — %@",
+                      loaded.vaultPath, String(describing: error))
+            }
+        }
         self.value = value
 
-        // First launch, or a file we had to move aside: write the defaults back out so that the
-        // promise "changing the hotkey is a one-line edit" has a line to edit.
-        if outcome != .loaded {
+        // Persist the dev-only migration in its own directory; a release file is unchanged.
+        if outcome != .loaded || value != loaded {
             try? store.save(value)
         }
     }
@@ -103,6 +110,7 @@ final class SettingsStore {
     func update(_ body: (inout Settings) -> Void) {
         let before = value
         body(&value)
+        value.isolateDevelopmentSettings()
         guard value != before else { return }
 
         // Written before the callback runs, so anything the callback triggers — re-registering the
@@ -125,8 +133,12 @@ final class SettingsStore {
     /// this file was read once at launch: the edit landed and nothing happened until the next
     /// relaunch, with nothing on screen to say so.
     func reloadFromDisk() {
-        let (fresh, outcome) = store.load(default: value)
-        guard outcome == .loaded, fresh != value, fresh != lastWrittenOnDisk else { return }
+        let (loaded, outcome) = store.load(default: value)
+        guard outcome == .loaded else { return }
+        var fresh = loaded
+        fresh.isolateDevelopmentSettings()
+        if fresh != loaded { try? store.save(fresh) }
+        guard fresh != value, fresh != lastWrittenOnDisk else { return }
         value = fresh
         onChange?(fresh)
     }

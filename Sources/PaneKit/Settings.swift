@@ -338,7 +338,7 @@ public struct Settings: Codable, Equatable, Sendable {
         schemaVersion: Int = Settings.currentSchemaVersion,
         vaultPath: String = Settings.defaultVaultPath,
         recentlyDeletedDays: Int = 30,
-        summonHotkey: Hotkey = .defaultSummon,
+        summonHotkey: Hotkey = BuildProfile.current.defaultSummonHotkey,
         dismissMode: DismissMode = .sameHotkeyToggles,
         shortcuts: [String: String] = Settings.standardShortcuts,
         language: String = L10n.systemPreference,
@@ -354,7 +354,7 @@ public struct Settings: Codable, Equatable, Sendable {
         translucentPanes: Bool = true,
         hideFromScreenCapture: Bool = false,
         showOnEverySpace: Bool = true,
-        checkForUpdates: Bool = true
+        checkForUpdates: Bool = BuildProfile.current.allowsSystemIntegration
     ) {
         self.schemaVersion = schemaVersion
         self.vaultPath = vaultPath
@@ -431,6 +431,45 @@ public struct Settings: Codable, Equatable, Sendable {
         // A theme is a bare filename in the themes folder. A path would let a hand-edited settings
         // file reach outside it, which is not what decision 19 offers.
         if markdownTheme.contains("/") || markdownTheme.hasPrefix(".") { markdownTheme = "" }
+    }
+
+    /// Older scratch settings inherited the release hotkey and background integrations.
+    /// Migrate that hotkey while preserving any other custom combination and the existing vault.
+    public mutating func isolateDevelopmentSettings(profile: BuildProfile = .current) {
+        guard profile == .scratch else { return }
+        if summonHotkey == Hotkey.defaultSummon { summonHotkey = profile.defaultSummonHotkey }
+        launchAtLogin = false
+        checkForUpdates = false
+    }
+
+    /// Copy the old default once, preserving the source as a backup. A populated destination may
+    /// belong to another checkout using the shared dev settings, so never merge or overwrite it.
+    /// Missing source folders retain their path so the usual missing-vault recovery still applies.
+    public mutating func migrateDevelopmentVault(
+        profile: BuildProfile = .current,
+        bundleURL: URL = Bundle.main.bundleURL,
+        homeDirectory: URL = FileManager.default.homeDirectoryForCurrentUser,
+        fileManager: FileManager = .default
+    ) throws {
+        guard profile == .scratch, bundleURL.pathExtension == "app" else { return }
+        let legacy = homeDirectory.appendingPathComponent("Pane-scratch", isDirectory: true)
+        let configured = vaultPath == "~/Pane-scratch" ? legacy : vaultURL
+        guard configured.standardizedFileURL == legacy.standardizedFileURL else { return }
+        let destination = URL(fileURLWithPath: profile.defaultVaultPath(bundleURL: bundleURL))
+        guard destination.standardizedFileURL != legacy.standardizedFileURL,
+              !fileManager.fileExists(atPath: destination.path) else { return }
+        var isDirectory: ObjCBool = false
+        guard fileManager.fileExists(atPath: legacy.path, isDirectory: &isDirectory),
+              isDirectory.boolValue else { return }
+
+        let parent = destination.deletingLastPathComponent()
+        try fileManager.createDirectory(at: parent, withIntermediateDirectories: true)
+        let staging = parent.appendingPathComponent(".Pane-scratch-migration-\(UUID().uuidString)")
+        defer { try? fileManager.removeItem(at: staging) }
+        try fileManager.copyItem(at: legacy, to: staging)
+        try fileManager.moveItem(at: staging, to: destination)
+        // Update only after the whole copy is in place; failures leave the configured vault intact.
+        vaultPath = destination.path
     }
 
     static func isHexColour(_ value: String) -> Bool {

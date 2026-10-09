@@ -50,7 +50,7 @@ final class AboutSettingsViewController: NSViewController {
         icon.widthAnchor.constraint(equalToConstant: 72).isActive = true
         icon.heightAnchor.constraint(equalToConstant: 72).isActive = true
 
-        let name = NSTextField(labelWithString: "Pane")
+        let name = NSTextField(labelWithString: BuildProfile.current.displayName)
         name.font = .systemFont(ofSize: 15, weight: .semibold)
 
         // The version and nothing else. A build number is ours rather than the reader's — it says
