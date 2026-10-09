@@ -3,25 +3,18 @@
 // Turns the two design exports in Design/ into the assets the app bundle wants.
 //
 //   Scripts/make-icons.swift
+//   Scripts/make-icons.swift --app-only   leave menu-bar resources unchanged
+//   Scripts/make-icons.swift --menu-only  leave app icons unchanged
 //
 // Run it by hand when the artwork changes; the outputs are committed, so a plain checkout builds
 // without needing to regenerate anything. `Scripts/build-app.sh` picks both of them up on its own.
 //
-//   Design/AppIcon.png      1254² opaque  ->  Scripts/AppIcon.icns
-//   Design/MenuBarIcon.png  1254² alpha   ->  Resources/MenuBar{,@2x,@3x}.png
+//   Design/AppIcon.png      square PNG  ->  Scripts/AppIcon.icns
+//   Design/MenuBarIcon.png  alpha PNG   ->  Resources/MenuBar{,@2x,@3x}.png
 //
-// Two things this has to do that a `sips` one-liner cannot.
-//
-// The app icon is exported **on an opaque black background** — the squircle is painted onto black
-// rather than cut out of it. Dropped into an .icns as-is it is a black square with a cream shape
-// inside. So the black is keyed out here. A luminance threshold is the obvious way and the wrong
-// one: the caret bar inside the artwork is darker (65) than the threshold would have to be, so a
-// threshold punches a hole through the middle of the drawing. A flood fill from the border only
-// ever reaches background, which is the actual thing being asked.
-//
-// And the artwork fills 92% of its canvas, where macOS app icons sit at 824/1024 — 80.5% — with the
-// rest as breathing room. An icon that skips that margin renders visibly larger than every other
-// icon in the Dock, which reads as a mistake rather than as emphasis. So it is re-inset here.
+// The app export already includes the intended transparent margin: keep its entire canvas and
+// alpha unchanged, and only resample for smaller icon representations. The menu-bar export is
+// fitted separately to its 18-point canvas.
 
 import AppKit
 import CoreGraphics
@@ -57,10 +50,6 @@ struct Bitmap {
         }
     }
 
-    func luminance(_ x: Int, _ y: Int) -> Int {
-        let p = self[x, y]
-        return (299 * Int(p.r) + 587 * Int(p.g) + 114 * Int(p.b)) / 1000
-    }
 }
 
 func loadBitmap(_ url: URL) -> Bitmap {
@@ -77,6 +66,7 @@ func loadBitmap(_ url: URL) -> Bitmap {
     // pointer Swift is free to move.
     let byteCount = image.width * image.height * 4
     let buffer = UnsafeMutableRawPointer.allocate(byteCount: byteCount, alignment: 4)
+    buffer.initializeMemory(as: UInt8.self, repeating: 0, count: byteCount)
     defer { buffer.deallocate() }
 
     // A bitmap context can only be premultiplied; straight alpha is recovered just below.
@@ -96,9 +86,8 @@ func loadBitmap(_ url: URL) -> Bitmap {
         destination.copyMemory(from: UnsafeRawBufferPointer(start: buffer, count: byteCount))
     }
 
-    // Un-premultiply. The source is opaque for the app icon and already black-with-alpha for the
-    // menu bar glyph, so this is a no-op in practice — but it keeps the keying below honest if a
-    // future export arrives with soft edges.
+    // Recover straight alpha before wrapping the pixels as a CGImage. Transparent artwork and
+    // soft shadows would otherwise be premultiplied again when the icon canvas draws them.
     for i in stride(from: 0, to: bitmap.pixels.count, by: 4) {
         let a = Int(bitmap.pixels[i + 3])
         guard a > 0, a < 255 else { continue }
@@ -155,79 +144,11 @@ func fail(_ message: String) -> Never {
     exit(1)
 }
 
-// ---------------------------------------------------------------------------------------------
-// Keying
-// ---------------------------------------------------------------------------------------------
-
-/// Replaces the black background with transparency, without touching dark pixels *inside* the art.
-///
-/// Flood fill rather than threshold, for the reason in the header: the caret bar in the artwork is
-/// darker than any threshold that would also catch the background's antialiased fringe. Reachability
-/// from the border is the property that actually distinguishes them.
-func keyOutBlackBackground(_ bitmap: Bitmap) -> Bitmap {
-    let w = bitmap.width, h = bitmap.height
-
-    // Measured on the current export: background is 0–6, the one antialiased pixel on each edge
-    // lands at 96–212, and the darkest interior pixel is 65. 100 sits above the background and its
-    // fringe without reaching anything that belongs to the drawing.
-    let backgroundCeiling = 100
-    // What the squircle is worth right at its edge, for recovering a fractional alpha.
-    let edgeReference = 240.0
-
-    var outside = [Bool](repeating: false, count: w * h)
-    var stack: [Int] = []
-
-    func consider(_ x: Int, _ y: Int) {
-        let i = y * w + x
-        guard !outside[i], bitmap.luminance(x, y) < backgroundCeiling else { return }
-        outside[i] = true
-        stack.append(i)
-    }
-
-    for x in 0..<w { consider(x, 0); consider(x, h - 1) }
-    for y in 0..<h { consider(0, y); consider(w - 1, y) }
-
-    while let i = stack.popLast() {
-        let x = i % w, y = i / w
-        if x > 0 { consider(x - 1, y) }
-        if x < w - 1 { consider(x + 1, y) }
-        if y > 0 { consider(x, y - 1) }
-        if y < h - 1 { consider(x, y + 1) }
-    }
-
-    var result = bitmap
-    for y in 0..<h {
-        for x in 0..<w {
-            if outside[y * w + x] {
-                result[x, y] = (0, 0, 0, 0)
-                continue
-            }
-            // The single partial pixel where the shape meets the background it was painted over.
-            // Recovering its coverage keeps the rounded corners smooth instead of stair-stepped.
-            let touchesOutside =
-                (x > 0 && outside[y * w + x - 1]) || (x < w - 1 && outside[y * w + x + 1])
-                || (y > 0 && outside[(y - 1) * w + x]) || (y < h - 1 && outside[(y + 1) * w + x])
-
-            let lum = bitmap.luminance(x, y)
-            guard touchesOutside, lum < 230 else { continue }
-
-            let coverage = min(1.0, Double(lum) / edgeReference)
-            let p = bitmap[x, y]
-            // Composited over black, so the stored colour is already coverage × the real colour.
-            func unmix(_ v: UInt8) -> UInt8 {
-                UInt8(min(255.0, (Double(v) / max(coverage, 0.05)).rounded()))
-            }
-            result[x, y] = (unmix(p.r), unmix(p.g), unmix(p.b), UInt8((coverage * 255).rounded()))
-        }
-    }
-    return result
-}
-
-/// The tightest rectangle containing every pixel that is not fully transparent.
-func inkBounds(_ bitmap: Bitmap) -> CGRect {
+/// Bounds are in bitmap-row coordinates, where CGContext's first row is at the bottom.
+func inkBounds(_ bitmap: Bitmap, minimumAlpha: UInt8 = 9) -> CGRect {
     var minX = bitmap.width, maxX = -1, minY = bitmap.height, maxY = -1
     for y in 0..<bitmap.height {
-        for x in 0..<bitmap.width where bitmap[x, y].a > 8 {
+        for x in 0..<bitmap.width where bitmap[x, y].a >= minimumAlpha {
             minX = min(minX, x); maxX = max(maxX, x)
             minY = min(minY, y); maxY = max(maxY, y)
         }
@@ -238,7 +159,9 @@ func inkBounds(_ bitmap: Bitmap) -> CGRect {
 
 /// Draws `image`'s `crop` region centred in a `size`² canvas, scaled so its longest side is `fit`.
 func compose(_ image: CGImage, crop: CGRect, canvas: Int, fit: Double) -> CGImage {
-    guard let cropped = image.cropping(to: crop) else { fail("crop failed") }
+    let imageCrop = CGRect(x: crop.minX, y: CGFloat(image.height) - crop.maxY,
+                           width: crop.width, height: crop.height)
+    guard let cropped = image.cropping(to: imageCrop) else { fail("crop failed") }
 
     let scale = fit / Double(max(crop.width, crop.height))
     let w = Double(crop.width) * scale
@@ -300,46 +223,57 @@ let root = URL(fileURLWithPath: CommandLine.arguments.first.map {
 let design = root.appendingPathComponent("Design")
 let scripts = root.appendingPathComponent("Scripts")
 let resources = root.appendingPathComponent("Resources")
+let arguments = Array(CommandLine.arguments.dropFirst())
+guard arguments.isEmpty || arguments == ["--app-only"] || arguments == ["--menu-only"] else {
+    fail("usage: Scripts/make-icons.swift [--app-only|--menu-only]")
+}
 
 // ---- app icon ---------------------------------------------------------------------------------
 
-print("==> App icon")
+if arguments != ["--menu-only"] {
+    print("==> App icon")
 
-let appSource = loadBitmap(design.appendingPathComponent("AppIcon.png"))
-let keyed = keyOutBlackBackground(appSource)
-let keyedImage = cgImage(keyed)
-let squircle = inkBounds(keyed)
-print("    keyed \(appSource.width)² · artwork \(Int(squircle.width))×\(Int(squircle.height))")
+    let appURL = design.appendingPathComponent("AppIcon.png")
+    guard let appSource = CGImageSourceCreateWithURL(appURL as CFURL, nil),
+          let master = CGImageSourceCreateImageAtIndex(appSource, 0, nil) else {
+        fail("could not read \(appURL.path)")
+    }
+    guard master.width == master.height else { fail("AppIcon.png must have a square canvas") }
+    print("    preserved full \(master.width)×\(master.height) canvas and original alpha")
 
-// 824 in 1024 is Apple's own grid for the rounded-rect app icon shape.
-let master = compose(keyedImage, crop: squircle, canvas: 1024, fit: 824)
+    let iconset = scripts.appendingPathComponent("AppIcon.iconset")
+    try? FileManager.default.removeItem(at: iconset)
+    try! FileManager.default.createDirectory(at: iconset, withIntermediateDirectories: true)
 
-let iconset = scripts.appendingPathComponent("AppIcon.iconset")
-try? FileManager.default.removeItem(at: iconset)
-try! FileManager.default.createDirectory(at: iconset, withIntermediateDirectories: true)
+    // Copy representations matching the source dimensions verbatim; smaller sizes use the whole image.
+    for (points, scale) in [(16, 1), (16, 2), (32, 1), (32, 2), (128, 1), (128, 2),
+                            (256, 1), (256, 2), (512, 1), (512, 2)] {
+        let pixels = points * scale
+        let name = scale == 1 ? "icon_\(points)x\(points).png" : "icon_\(points)x\(points)@2x.png"
+        let destination = iconset.appendingPathComponent(name)
+        if pixels == master.width {
+            try Data(contentsOf: appURL).write(to: destination)
+        } else {
+            writePNG(resize(master, to: pixels), to: destination)
+        }
+    }
 
-// The full set iconutil expects. 512@2x is the 1024 master itself.
-for (points, scale) in [(16, 1), (16, 2), (32, 1), (32, 2), (128, 1), (128, 2),
-                        (256, 1), (256, 2), (512, 1), (512, 2)] {
-    let pixels = points * scale
-    let name = scale == 1 ? "icon_\(points)x\(points).png" : "icon_\(points)x\(points)@2x.png"
-    writePNG(resize(master, to: pixels), to: iconset.appendingPathComponent(name))
+    let icns = scripts.appendingPathComponent("AppIcon.icns")
+    let iconutil = Process()
+    iconutil.executableURL = URL(fileURLWithPath: "/usr/bin/iconutil")
+    iconutil.arguments = ["-c", "icns", iconset.path, "-o", icns.path]
+    try! iconutil.run()
+    iconutil.waitUntilExit()
+    guard iconutil.terminationStatus == 0 else { fail("iconutil failed") }
+
+    // The .iconset is an intermediate; the .icns is the artefact worth committing.
+    try? FileManager.default.removeItem(at: iconset)
+    print("    wrote Scripts/AppIcon.icns")
 }
-
-let icns = scripts.appendingPathComponent("AppIcon.icns")
-let iconutil = Process()
-iconutil.executableURL = URL(fileURLWithPath: "/usr/bin/iconutil")
-iconutil.arguments = ["-c", "icns", iconset.path, "-o", icns.path]
-try! iconutil.run()
-iconutil.waitUntilExit()
-guard iconutil.terminationStatus == 0 else { fail("iconutil failed") }
-
-// The .iconset is an intermediate; the .icns is the artefact worth committing.
-try? FileManager.default.removeItem(at: iconset)
-print("    wrote Scripts/AppIcon.icns")
 
 // ---- menu bar icon ----------------------------------------------------------------------------
 
+if arguments == ["--app-only"] { exit(0) }
 print("==> Menu bar icon")
 
 let menuSource = loadBitmap(design.appendingPathComponent("MenuBarIcon.png"))
