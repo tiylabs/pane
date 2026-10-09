@@ -1,0 +1,21 @@
+# Tuned to the codebase's existing style (long explanatory comments, trailing commas, short math
+# names, big view controllers). Add rules back as the code is brought in line.
+included:
+  - Sources
+excluded:
+  - .build
+  - build
+  - Editor/node_modules
+
+disabled_rules:
+  - trailing_comma        # multi-line literals keep their trailing comma
+  - identifier_name       # x / y / dx / i are the right names in geometry code
+  - line_length           # comments carry the decision record and run long
+  - file_length
+  - type_body_length
+  - function_body_length
+  - cyclomatic_complexity
+  - large_tuple
+  - type_name
+
+opt_in_rules: []
