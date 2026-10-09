@@ -81,6 +81,10 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         window.toolbarStyle = .preference
         window.title = tr("settings.title")
         window.isReleasedWhenClosed = false
+        // Follow Pane's own Light / Dark choice, not just the system's: the pane panel already does
+        // (`PaneController.applySettings`), and a settings window left on the system appearance
+        // stays light while the pane it configures is dark.
+        window.appearance = settings.value.appearance.nsAppearance
         window.center()
 
         super.init(window: window)
@@ -112,6 +116,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     /// Pushes a change into every tab, so a value edited on one tab — or in `settings.json` while
     /// this window is open — is not stale on the others.
     func settingsChanged(_ new: Settings) {
+        window?.appearance = new.appearance.nsAppearance
         general.settingsChanged(new)
         storage.settingsChanged(new)
         appearance.settingsChanged(new)

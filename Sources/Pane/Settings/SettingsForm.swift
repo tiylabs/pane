@@ -1,4 +1,5 @@
 import AppKit
+import PaneKit
 
 /// Builds the right-aligned label / left-aligned control layout every Settings tab uses.
 ///
@@ -199,5 +200,16 @@ final class SettingsForm {
             container.widthAnchor.constraint(equalToConstant: Self.contentWidth),
         ])
         return container
+    }
+}
+
+extension Settings.Appearance {
+    /// `nil` means "follow the system", which is what `NSWindow.appearance` does when unset.
+    var nsAppearance: NSAppearance? {
+        switch self {
+        case .light: NSAppearance(named: .aqua)
+        case .dark: NSAppearance(named: .darkAqua)
+        case .system: nil
+        }
     }
 }

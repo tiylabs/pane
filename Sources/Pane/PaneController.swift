@@ -1379,11 +1379,7 @@ final class PaneController: NSObject {
 
         // The material picks its light or dark variant from the window's appearance, so the two have
         // to be told the same thing — otherwise a dark-mode pane gets a light blur behind dark text.
-        panel.appearance = switch settings.value.appearance {
-        case .light: NSAppearance(named: .aqua)
-        case .dark: NSAppearance(named: .darkAqua)
-        case .system: nil
-        }
+        panel.appearance = settings.value.appearance.nsAppearance
 
         editor.call(
             "applySettings",
