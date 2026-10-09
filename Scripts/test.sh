@@ -11,4 +11,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
+# SwiftPM's Xcode build-system layout is not always .build/<triple>/<config>; make the
+# test-only resource path explicit rather than relying on the executable's directory depth.
+export PANE_LOCALES="${PANE_LOCALES:-$ROOT/Locales}"
 exec swift run "$@" PaneKitTests
