@@ -11,7 +11,7 @@ import PaneKit
 /// `NoteIndex` is owned here and touched only from `queue`.
 final class VaultService: @unchecked Sendable {
 
-    private let queue = DispatchQueue(label: "dev.colemei.pane.vault", qos: .userInitiated)
+    private let queue = DispatchQueue(label: "com.tiylabs.pane.vault", qos: .userInitiated)
 
     /// Waiting for iCloud happens here rather than on `queue`.
     ///
@@ -24,7 +24,7 @@ final class VaultService: @unchecked Sendable {
     /// The ordering argument for the serial queue is about work that *touches* the vault — a write,
     /// the FSEvents reaction to it, the index refresh behind it. A wait touches nothing, so it does
     /// not belong in that line. The `load` that follows the wait still does.
-    private let downloads = DispatchQueue(label: "dev.colemei.pane.vault.download", qos: .utility)
+    private let downloads = DispatchQueue(label: "com.tiylabs.pane.vault.download", qos: .utility)
 
     private let index = NoteIndex()
 

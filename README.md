@@ -17,10 +17,10 @@
 </p>
 
 <p align="center">
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/ColeMei/pane?style=flat-square" alt="License"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/tiylabs/pane?style=flat-square" alt="License"></a>
   <img src="https://img.shields.io/badge/built_with-Swift-orange?logo=swift&style=flat-square" alt="Built with Swift">
   <img src="https://img.shields.io/badge/platform-macOS_14+-lightgrey?style=flat-square" alt="Platform: macOS 14+">
-  <a href="https://github.com/ColeMei/pane/releases"><img src="https://img.shields.io/github/v/release/ColeMei/pane?style=flat-square" alt="Latest release"></a>
+  <a href="https://github.com/tiylabs/pane/releases"><img src="https://img.shields.io/github/v/release/tiylabs/pane?style=flat-square" alt="Latest release"></a>
 </p>
 
 <p align="center">
@@ -33,36 +33,20 @@ panel when you're done. Pane runs independently of Raycast, with unlimited notes
 or subscription.
 
 <p align="center">
-  <a href="https://github.com/ColeMei/pane/releases/latest"><b>Download for macOS</b></a>
+  <a href="https://github.com/tiylabs/pane/releases/latest"><b>Download for macOS</b></a>
   · <a href="#install">Installation instructions</a>
 </p>
 
 ## Install
 
 ```bash
-brew install --cask ColeMei/pane/pane
+brew install --cask tiylabs/tap/pane
 ```
 
-Or download the `.dmg` from the [latest release](https://github.com/ColeMei/pane/releases/latest), open it,
+Or download the `.dmg` from the [latest release](https://github.com/tiylabs/pane/releases/latest), open it,
 and drag `Pane.app` onto the `Applications` folder beside it.
 
-> [!IMPORTANT]
-> **macOS may block Pane on first launch.**
->
-> Pane is not signed with an Apple Developer ID or notarized by Apple. Depending on your macOS
-> version, Gatekeeper may report that the app is damaged or that its developer cannot be verified.
-> If you installed Pane from this repository's releases or Homebrew cask, you can clear its
-> quarantine flag once:
->
-> ```bash
-> xattr -dr com.apple.quarantine /Applications/Pane.app
-> ```
->
-> Or skip the flag at install time:
->
-> ```bash
-> brew install --cask --no-quarantine ColeMei/pane/pane
-> ```
+Releases are signed with an Apple Developer ID and notarized by Apple, so Pane opens normally on first launch.
 
 ## Coming from Raycast Notes
 

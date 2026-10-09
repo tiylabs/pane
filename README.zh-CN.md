@@ -13,10 +13,10 @@
 </p>
 
 <p align="center">
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/ColeMei/pane?style=flat-square" alt="License"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/tiylabs/pane?style=flat-square" alt="License"></a>
   <img src="https://img.shields.io/badge/built_with-Swift-orange?logo=swift&style=flat-square" alt="Built with Swift">
   <img src="https://img.shields.io/badge/platform-macOS_14+-lightgrey?style=flat-square" alt="Platform: macOS 14+">
-  <a href="https://github.com/ColeMei/pane/releases"><img src="https://img.shields.io/github/v/release/ColeMei/pane?style=flat-square" alt="Latest release"></a>
+  <a href="https://github.com/tiylabs/pane/releases"><img src="https://img.shields.io/github/v/release/tiylabs/pane?style=flat-square" alt="Latest release"></a>
 </p>
 
 <p align="center">
@@ -30,20 +30,13 @@ Markdown 实时渲染，笔记就是文件夹里的 `.md` 文件。不需要装 
 ## 安装
 
 ```bash
-brew install --cask ColeMei/pane/pane
+brew install --cask tiylabs/tap/pane
 ```
 
-或者到 [Releases](https://github.com/ColeMei/pane/releases/latest) 下载 `.dmg`，把 Pane 拖进
+或者到 [Releases](https://github.com/tiylabs/pane/releases/latest) 下载 `.dmg`，把 Pane 拖进
 Applications。
 
-> [!IMPORTANT]
-> Pane 暂时没有签名，第一次打开时 macOS 会提示"已损坏"。需要运行一次以下命令：
->
-> ```bash
-> xattr -dr com.apple.quarantine /Applications/Pane.app
-> ```
->
-> 用 Homebrew 的话，也可以安装时加上 `--no-quarantine`。
+发布版使用 Apple Developer ID 签名并通过 Apple 公证，首次打开不需要任何额外操作。
 
 ## 和 Raycast Notes 比
 

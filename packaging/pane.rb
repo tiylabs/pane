@@ -1,20 +1,20 @@
 # Homebrew cask for Pane.
 #
 # This file is the source copy. The one Homebrew actually reads lives in the tap repo
-# `ColeMei/homebrew-pane` as `Casks/pane.rb`; releasing copies this there with the version, url and
-# sha256 updated. Keeping a copy here means the caveat text and the cask's shape are reviewed in the
-# same pull request as the code they describe, instead of drifting in a repo nobody opens.
-#
-# The release workflow prints the sha256 in its job summary, so bumping is copy and paste.
+# `tiylabs/homebrew-tap` as `Casks/pane.rb`; publishing a release makes the workflow copy this there
+# with the version and sha256 rewritten (the two lines starting `version` and `sha256`, which the
+# workflow matches by shape — keep them as single lines). Keeping a copy here means the caveat text
+# and the cask's shape are reviewed in the same pull request as the code they describe, instead of
+# drifting in a repo nobody opens.
 
 cask "pane" do
   version "0.7.2"
   sha256 "2e02341e2fdc23153c077f6b9e2481f08730edad9ef0543a4bc2db138041d2e4"
 
-  url "https://github.com/ColeMei/pane/releases/download/v#{version}/Pane-#{version}.dmg"
+  url "https://github.com/tiylabs/pane/releases/download/v#{version}/Pane-#{version}.dmg"
   name "Pane"
   desc "Hotkey-summoned notes panel backed by a folder of markdown files you own"
-  homepage "https://github.com/ColeMei/pane"
+  homepage "https://github.com/tiylabs/pane"
 
   depends_on macos: :sonoma
 
@@ -37,19 +37,6 @@ cask "pane" do
   # a way to lose them.
 
   caveats <<~EOS
-    Pane is unsigned — there is no Apple Developer ID behind it.
-
-    On recent macOS that means Gatekeeper reports the app as "damaged and can't be
-    opened", and right-clicking → Open no longer gets past it. It is not damaged;
-    that is simply what an unsigned app looks like now. Clear the quarantine flag
-    once and it launches normally from then on:
-
-      xattr -dr com.apple.quarantine /Applications/Pane.app
-
-    Or skip the flag at install time:
-
-      brew install --cask --no-quarantine ColeMei/pane/pane
-
     Pane requests no privacy permissions at all: the global hotkey goes through
     RegisterEventHotKey, which needs no Accessibility access. The only request it
     ever makes to the network is asking GitHub whether a newer release exists --

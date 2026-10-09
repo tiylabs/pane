@@ -12,8 +12,8 @@ import PaneKit
 /// its own. Both callers are a press or a keypress.
 enum UpdateChecker {
 
-    static let releasesAPI = URL(string: "https://api.github.com/repos/ColeMei/pane/releases/latest")!
-    static let releasesPage = URL(string: "https://github.com/ColeMei/pane/releases")!
+    static let releasesAPI = URL(string: "https://api.github.com/repos/tiylabs/pane/releases/latest")!
+    static let releasesPage = URL(string: "https://github.com/tiylabs/pane/releases")!
 
     /// `CFBundleShortVersionString`, which `build-app.sh` writes from the tag.
     static var runningVersion: String {

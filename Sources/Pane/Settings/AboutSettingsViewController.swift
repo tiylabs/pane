@@ -27,7 +27,7 @@ import PaneKit
 final class AboutSettingsViewController: NSViewController {
 
     private static let releasesPage = UpdateChecker.releasesPage
-    private static let repository = URL(string: "https://github.com/ColeMei/pane")!
+    private static let repository = URL(string: "https://github.com/tiylabs/pane")!
 
     private var status: NSTextField!
     private var checkButton: NSButton!

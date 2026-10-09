@@ -24,7 +24,7 @@ public final class VaultWatcher {
     /// - Parameter handler: called on `queue` with the changed paths. Never called on the main
     ///   thread — reading those files is the caller's job and must not happen there either.
     public init(
-        queue: DispatchQueue = DispatchQueue(label: "dev.colemei.pane.vault-watcher"),
+        queue: DispatchQueue = DispatchQueue(label: "com.tiylabs.pane.vault-watcher"),
         handler: @escaping @Sendable ([String]) -> Void
     ) {
         self.queue = queue
