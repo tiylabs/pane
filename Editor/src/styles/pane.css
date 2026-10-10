@@ -148,6 +148,27 @@ body {
   background: var(--close-dot-pressed);
 }
 
+/* The thumbtack: faded with the other buttons while off, but it stays readable while on — whether
+ * the pane is staying over your work is state you need to see without hovering. Filled and tinted
+ * like the note pin so "on" is not mistaken for a hovered outline. Boxes never change (decision 41). */
+.pane:not([data-hover]):not([data-keep-on-top]) #keep-on-top {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.pane[data-keep-on-top] #keep-on-top {
+  color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 14%, transparent);
+}
+
+.pane[data-keep-on-top] #keep-on-top svg {
+  fill: currentColor;
+}
+
+#keep-on-top {
+  transition: opacity 120ms ease, color 120ms ease, background-color 120ms ease;
+}
+
 /* Buttons fade rather than leave: clicking one would have to focus the pane first anyway, so they
    are noise over somebody else's work — but their boxes stay, so nothing reflows. */
 .pane:not([data-hover]) #open-actions,

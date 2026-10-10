@@ -191,6 +191,10 @@
   "editor.aria.actions": "操作",
 
   "editor.tip.close": "关闭",
+
+  "editor.tip.keepOnTop": "固定在最前",
+
+  "editor.tip.keepOnTop.on": "取消固定在最前",
   "editor.tip.unpin": "取消置顶",
   "editor.tip.actions": "操作",
   "editor.tip.notes": "笔记",

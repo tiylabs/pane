@@ -103,6 +103,25 @@ func runSettingsTests() {
         }
     }
 
+    Check.suite("Keep on top setting") {
+        func decode(_ json: String) -> Settings? {
+            try? JSONDecoder().decode(Settings.self, from: Data(json.utf8))
+        }
+
+        Check.test("off by default, including for settings files that predate it") {
+            Check.equal(Settings().keepOnTop, false)
+            Check.equal(decode("{}")?.keepOnTop, false)
+        }
+
+        Check.test("the choice survives a round trip") {
+            var settings = Settings()
+            settings.keepOnTop = true
+            let data = try? JSONEncoder().encode(settings)
+            let back = data.flatMap { try? JSONDecoder().decode(Settings.self, from: $0) }
+            Check.equal(back?.keepOnTop, true)
+        }
+    }
+
     Check.suite("Panel opacity setting") {
         func decode(_ json: String) -> Settings? {
             try? JSONDecoder().decode(Settings.self, from: Data(json.utf8))

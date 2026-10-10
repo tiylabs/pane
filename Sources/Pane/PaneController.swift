@@ -1374,6 +1374,9 @@ final class PaneController: NSObject {
         // it showed as a square black frame around the rounded pane. Glass has its own edge.
         panel.hasShadow = !editor.usesGlass
         panel.showsOnEverySpace = settings.value.showOnEverySpace
+        panel.keepsOnTop = settings.value.keepOnTop
+        editor.holdsFocusedLook = settings.value.keepOnTop
+        editor.call("setKeepOnTop", [settings.value.keepOnTop])
         applyHiddenFromCapture()
         // Not a setting — pane state — but this runs on `ready`, which is the one moment the web
         // layer needs telling. Its ⌘K label is otherwise wrong until the row is pressed once.
@@ -1602,6 +1605,15 @@ extension PaneController: EditorWebViewDelegate {
             // Decision 73's rule, reached by a second route: what this changes is invisible until
             // you switch Space, so without a line the key reads as having done nothing at all.
             editor.call("showToast", [now ? tr("toast.everySpace") : tr("toast.thisSpace")])
+
+        case .toggleKeepOnTop:
+            // Spelled out before the update, never read inside the closure: see `toggleFooterCount`.
+            let now = !settings.value.keepOnTop
+            settings.update { $0.keepOnTop = now }
+            // `settings.update` reaches `applySettings` asynchronously; the click should act at once.
+            panel.keepsOnTop = now
+            editor.holdsFocusedLook = now
+            editor.call("setKeepOnTop", [now])
 
         case .toggleFooterCount:
             // Read out of the store *before* the update, never inside the closure: `settings.update`

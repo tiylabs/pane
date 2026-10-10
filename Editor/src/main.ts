@@ -100,6 +100,7 @@ type OutboundMessage =
   | { type: "toggleHideFromCapture" }
   | { type: "toggleAutoSizing" }
   | { type: "toggleSpaceBehaviour" }
+  | { type: "toggleKeepOnTop" }
   | { type: "toggleFooterCount" }
   | { type: "duplicateNote"; text: string }
   | { type: "requestDeleted" }
@@ -806,6 +807,9 @@ renderCount(view.state.doc.toString());
 
 document.getElementById("format-toggle")!.addEventListener("click", toggleFormatBar);
 closeEl.addEventListener("click", () => send({ type: "close" }));
+document.getElementById("keep-on-top")!.addEventListener("click", () =>
+  send({ type: "toggleKeepOnTop" })
+);
 document.getElementById("new-note")!.addEventListener("click", () =>
   send({ type: "createNote", title: "" })
 );
@@ -823,6 +827,7 @@ mountTooltips(paneEl);
  * rule, its fourth instance (92). */
 const CHROME_TIPS: [selector: string, label: string, action: string | null][] = [
   ["#close", "editor.tip.close", null],
+  ["#keep-on-top", "editor.tip.keepOnTop", null],
   ["#pin", "editor.tip.unpin", "pinPane"],
   ["#open-actions", "editor.tip.actions", "actionPanel"],
   ["#browse", "editor.tip.notes", "browseNotes"],
@@ -838,7 +843,12 @@ function refreshChromeTooltips(): void {
   for (const [selector, labelKey, action] of CHROME_TIPS) {
     const element = document.querySelector<HTMLElement>(selector);
     if (!element) continue;
-    const label = t(labelKey);
+    // The thumbtack names the thing it will do, so its text follows the state.
+    const label = t(
+      selector === "#keep-on-top" && paneEl.hasAttribute("data-keep-on-top")
+        ? "editor.tip.keepOnTop.on"
+        : labelKey
+    );
     const binding = action ? liveShortcuts[action] ?? DEFAULT_SHORTCUTS[action] : undefined;
     describe(element, binding ? `${label} ${keyCaps(binding).join("")}` : label);
   }
@@ -1176,6 +1186,12 @@ const host = {
     hiddenFromCapture = hidden;
   },
 
+  setKeepOnTop(on: boolean): void {
+    paneEl.toggleAttribute("data-keep-on-top", on);
+    document.getElementById("keep-on-top")!.setAttribute("aria-pressed", String(on));
+    refreshChromeTooltips();
+  },
+
   setOnEverySpace(on: boolean): void {
     onEverySpace = on;
   },
@@ -1298,7 +1314,7 @@ new ResizeObserver(() => {
  * attribute that still changes the bar's layout. */
 new MutationObserver(reportDragRegions).observe(paneEl, {
   attributes: true,
-  attributeFilter: ["data-pinned"],
+  attributeFilter: ["data-pinned", "data-keep-on-top"],
 });
 
 reportDragRegions();

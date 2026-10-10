@@ -194,6 +194,10 @@
   "editor.aria.actions": "Actions",
 
   "editor.tip.close": "Close",
+
+  "editor.tip.keepOnTop": "Keep on top",
+
+  "editor.tip.keepOnTop.on": "Stop keeping on top",
   "editor.tip.unpin": "Unpin",
   "editor.tip.actions": "Actions",
   "editor.tip.notes": "Notes",

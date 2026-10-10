@@ -43,6 +43,8 @@ enum PaneMessage {
     /// ⇧⌘/. Auto-sizing is window state, so only Swift can hold it (decision 40).
     case toggleAutoSizing
     case toggleSpaceBehaviour
+    /// The title bar's thumbtack. Window level is window state, so the page only asks.
+    case toggleKeepOnTop
     case toggleFooterCount
     /// ⌘D. Carries the buffer rather than re-reading the file, so a duplicate taken mid-sentence
     /// contains the sentence.
@@ -121,6 +123,8 @@ enum PaneMessage {
             self = .toggleAutoSizing
         case "toggleSpaceBehaviour":
             self = .toggleSpaceBehaviour
+        case "toggleKeepOnTop":
+            self = .toggleKeepOnTop
         case "toggleFooterCount":
             self = .toggleFooterCount
         case "duplicateNote":
@@ -262,6 +266,22 @@ final class EditorWebView: NSView {
     /// are about to read or type in needs. So the focused pane takes `.regular` (frosted, deeper) and
     /// the unfocused one `.clear`, and the page scrim deepens on top (`data-focused` in tokens.css).
     func setFocused(_ focused: Bool) {
+        keyFocused = focused
+        applyFocusedLook()
+    }
+
+    /// Whether the pane is in the window's key state, as last reported by the window delegate.
+    private var keyFocused = false
+
+    /// Keep on top holds the focused look (frosted glass, deeper scrim) whether or not the window is
+    /// key: a pane the user has pinned over their work is meant to be read at a glance, and losing
+    /// key status to the app underneath it should not make it dissolve into the wallpaper.
+    var holdsFocusedLook = false {
+        didSet { if holdsFocusedLook != oldValue { applyFocusedLook() } }
+    }
+
+    private func applyFocusedLook() {
+        let focused = keyFocused || holdsFocusedLook
         call("setFocused", [focused])
         guard usesGlass, #available(macOS 26, *), let glass = material as? NSGlassEffectView else { return }
         if UserDefaults.standard.string(forKey: "PaneMaterial") != nil { return }

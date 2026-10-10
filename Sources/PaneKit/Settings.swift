@@ -346,6 +346,15 @@ public struct Settings: Codable, Equatable, Sendable {
     /// that either behaviour was wrong. This is the explicit control it was asking for.
     public var showOnEverySpace: Bool
 
+    /// Whether the pane stays above other applications' windows (the title bar's thumbtack).
+    ///
+    /// Off is the default: the pane is an ordinary-level window, so it comes forward when summoned
+    /// and then goes behind whatever you click next like any other window. On is `.floating`, which
+    /// is what the pane used to be unconditionally. A setting rather than per-session state for the
+    /// reason `hideFromScreenCapture` is one — a choice to keep it up outlives the process, and one
+    /// that silently lapses on relaunch is not a choice that was kept.
+    public var keepOnTop: Bool
+
     /// Whether Pane asks GitHub, about once a day on summon, whether a newer release exists.
     ///
     /// **This is the switch on the network call, not on the notice.** Off means no request leaves
@@ -381,6 +390,7 @@ public struct Settings: Codable, Equatable, Sendable {
         panelOpacity: Double = Settings.defaultPanelOpacity,
         hideFromScreenCapture: Bool = false,
         showOnEverySpace: Bool = true,
+        keepOnTop: Bool = false,
         checkForUpdates: Bool = BuildProfile.current.allowsSystemIntegration
     ) {
         self.schemaVersion = schemaVersion
@@ -402,6 +412,7 @@ public struct Settings: Codable, Equatable, Sendable {
         self.panelOpacity = min(max(panelOpacity, Self.panelOpacityRange.lowerBound), Self.panelOpacityRange.upperBound)
         self.hideFromScreenCapture = hideFromScreenCapture
         self.showOnEverySpace = showOnEverySpace
+        self.keepOnTop = keepOnTop
         self.checkForUpdates = checkForUpdates
     }
 
@@ -448,6 +459,7 @@ public struct Settings: Codable, Equatable, Sendable {
             try c.decodeIfPresent(Bool.self, forKey: .hideFromScreenCapture) ?? d.hideFromScreenCapture
         showOnEverySpace =
             try c.decodeIfPresent(Bool.self, forKey: .showOnEverySpace) ?? d.showOnEverySpace
+        keepOnTop = try c.decodeIfPresent(Bool.self, forKey: .keepOnTop) ?? d.keepOnTop
         checkForUpdates =
             try c.decodeIfPresent(Bool.self, forKey: .checkForUpdates) ?? d.checkForUpdates
 

@@ -66,8 +66,7 @@ final class PanePanel: NSPanel {
             defer: false
         )
 
-        isFloatingPanel = true
-        level = .floating
+        applyLevel()
         // Without this an accessory app's panel vanishes the moment you click back into your editor,
         // which is the opposite of a panel you can type into while reading something else.
         hidesOnDeactivate = false
@@ -195,6 +194,27 @@ final class PanePanel: NSPanel {
         didSet { if showsOnEverySpace != oldValue { applyCollectionBehaviour() } }
     }
 
+    /// Whether the pane stays above other applications (`Settings.keepOnTop`). Off, it is an
+    /// ordinary-level window: summoning still brings it to the front, but it goes behind whatever
+    /// is clicked next.
+    var keepsOnTop = false {
+        didSet { if keepsOnTop != oldValue { applyLevel() } }
+    }
+
+    /// Set while a window the app put in front on purpose (Settings, a save panel) is up; see
+    /// `stepAside`. Kept apart from `keepsOnTop` so that stepping aside never forgets the choice.
+    private var steppedAside = false {
+        didSet { if steppedAside != oldValue { applyLevel() } }
+    }
+
+    /// `isFloatingPanel` owns the level — setting `level` alone leaves it back at `.floating` — so
+    /// the two always move together.
+    private func applyLevel() {
+        let floating = keepsOnTop && !steppedAside
+        isFloatingPanel = floating
+        level = floating ? .floating : .normal
+    }
+
     func applyCollectionBehaviour() {
         var behaviour: NSWindow.CollectionBehavior = [.fullScreenAuxiliary, .ignoresCycle]
         if showsOnEverySpace { behaviour.insert(.canJoinAllSpaces) }
@@ -284,7 +304,7 @@ extension PanePanel {
 
     /// Steps every pane out of the way of a window the app has put in front on purpose.
     ///
-    /// A pane sits at `.floating` so it stays above other applications — that is the product. A save
+    /// A pane the user has kept on top sits at `.floating` so it stays above other applications. A save
     /// panel, an `NSAlert` and the Settings window are ordinary windows at `.normal`, so **all four
     /// moments Pane deliberately activates** (decisions 16, 27, 37 and the Sync alert of decision
     /// 30) put their window *behind* the pane. Measured on the running app: the Export panel's Save
@@ -299,16 +319,14 @@ extension PanePanel {
     /// the panel back at `.floating` and the save panel still behind it.
     static func stepAside() {
         for pane in NSApp.windows.compactMap({ $0 as? PanePanel }) {
-            pane.isFloatingPanel = false
-            pane.level = .normal
+            pane.steppedAside = true
         }
     }
 
     /// Puts them back. Safe to call when nothing stepped aside.
     static func resumeFloating() {
         for pane in NSApp.windows.compactMap({ $0 as? PanePanel }) {
-            pane.isFloatingPanel = true
-            pane.level = .floating
+            pane.steppedAside = false
         }
     }
 
