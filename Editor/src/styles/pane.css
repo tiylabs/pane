@@ -119,6 +119,16 @@ body {
   border: none;
 }
 
+/* Hidden only when the pane is neither key nor under the pointer. Focused-but-not-hovered keeps the
+ * grey dot (typing in the pane, mouse elsewhere), and hovering an unfocused pane brings it back —
+ * `data-hover` comes from Swift's pointer read, so that works with the pane over another app.
+ * Opacity, never `display`: the dot's box feeds the drag exclusions (decision 41). `pointer-events`
+ * off so an invisible dot cannot be clicked; (0,4,0) beats the (0,3,0) rules around it. */
+.pane:not([data-focused]):not([data-hover]) .pane__close {
+  opacity: 0;
+  pointer-events: none;
+}
+
 /* Decision 107: the dot answers the pointer, like every other control in the pane did already.
  *
  * Hover is `[data-close-hover]` from Swift, not `:hover` — measured, and it is the same finding
