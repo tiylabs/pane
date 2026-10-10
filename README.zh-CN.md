@@ -5,7 +5,7 @@
 <h1 align="center">Plume</h1>
 
 <p align="center">
-  一键呼出的 macOS 浮动笔记，Raycast Notes 的免费开源替代。
+  在你的 macOS 上一键呼出的草稿本，Markdown 随记随查
 </p>
 
 <p align="center">

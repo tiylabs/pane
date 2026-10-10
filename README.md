@@ -5,8 +5,7 @@
 <h1 align="center">Plume</h1>
 
 <p align="center">
-  A sheet of glass over whatever you're doing, that you can write on.<br>
-  <b>A free, open source alternative to Raycast Notes for macOS.</b>
+  A sheet of glass over whatever you're doing, that you can write on.
 </p>
 
 <p align="center">
