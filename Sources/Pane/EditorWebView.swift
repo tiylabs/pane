@@ -371,7 +371,7 @@ final class EditorWebView: NSView {
                 material.alphaValue = 1
             } else {
                 material.isHidden = panelOpacity >= 1 || panelOpacity <= 0
-                material.alphaValue = min(1, max(0, panelOpacity / Settings.defaultPanelOpacity))
+                material.alphaValue = min(1, max(0, panelOpacity / Settings.legacyTranslucentPanelOpacity))
             }
         }
     }

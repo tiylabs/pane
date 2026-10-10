@@ -323,7 +323,9 @@ public struct Settings: Codable, Equatable, Sendable {
     /// Half of the full 0...1: below 0.5 the pane is too see-through to read, so the slider's whole
     /// travel is spent on the half that is usable. A saved value below it clamps up to it.
     public static let panelOpacityRange: ClosedRange<Double> = 0.5...1
-    public static let defaultPanelOpacity: Double = 0.75
+    public static let defaultPanelOpacity: Double = 1
+    /// What the pre-slider "translucent panes" switch meant when it was on.
+    public static let legacyTranslucentPanelOpacity: Double = 0.75
 
     /// The Settings slider's position, 0...100 (shown as a percentage of transparency), for an
     /// opacity. Stretched over `panelOpacityRange`, so 100 is the most transparent the pane gets
@@ -466,9 +468,9 @@ public struct Settings: Codable, Equatable, Sendable {
             ?? d.footerCount
         textSize = try c.decodeIfPresent(Double.self, forKey: .textSize) ?? d.textSize
         let legacy = try decoder.container(keyedBy: LegacyCodingKeys.self)
-        let wasTranslucent = try legacy.decodeIfPresent(Bool.self, forKey: .translucentPanes) ?? true
+        let wasTranslucent = try legacy.decodeIfPresent(Bool.self, forKey: .translucentPanes)
         panelOpacity = try c.decodeIfPresent(Double.self, forKey: .panelOpacity)
-            ?? (wasTranslucent ? d.panelOpacity : 1)
+            ?? (wasTranslucent == true ? Self.legacyTranslucentPanelOpacity : d.panelOpacity)
         hideFromScreenCapture =
             try c.decodeIfPresent(Bool.self, forKey: .hideFromScreenCapture) ?? d.hideFromScreenCapture
         showOnEverySpace =

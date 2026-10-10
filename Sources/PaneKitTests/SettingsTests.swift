@@ -129,7 +129,7 @@ func runSettingsTests() {
 
         Check.test("old translucency choices retain their appearance") {
             Check.equal(decode("{}")?.panelOpacity, Settings.defaultPanelOpacity)
-            Check.equal(decode(#"{"translucentPanes":true}"#)?.panelOpacity, Settings.defaultPanelOpacity)
+            Check.equal(decode(#"{"translucentPanes":true}"#)?.panelOpacity, 0.75)
             Check.equal(decode(#"{"translucentPanes":false}"#)?.panelOpacity, 1)
         }
 
@@ -157,8 +157,9 @@ func runSettingsTests() {
     }
 
     Check.suite("Panel transparency slider") {
-        Check.test("the default sits in the middle of the slider") {
-            Check.equal(Settings.transparencySliderValue(forOpacity: Settings.defaultPanelOpacity), 50)
+        Check.test("the default is fully opaque, the slider's zero") {
+            Check.equal(Settings.defaultPanelOpacity, 1)
+            Check.equal(Settings.transparencySliderValue(forOpacity: Settings.defaultPanelOpacity), 0)
         }
 
         Check.test("the slider's ends are the ends of the opacity range") {
