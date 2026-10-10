@@ -53,9 +53,9 @@ Applications。发布版已签名并通过 Apple 公证。
 只需 Command Line Tools，不需要 Xcode。
 
 ```bash
-Scripts/test-all.sh            # 运行全部测试
-make dev                       # 编译并启动独立的开发版 build/Plume Dev.app
-Scripts/build-app.sh --release # 构建正式版 build/Plume.app
+make test-all  # 运行全部测试
+make dev       # 编译并启动独立的开发版 build/Plume Dev.app
+make build     # 构建正式版 build/Plume.app
 ```
 
 ## 许可证

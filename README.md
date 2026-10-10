@@ -55,9 +55,9 @@ and drag `Plume.app` into `Applications`. Releases are signed and notarized by A
 Needs the Command Line Tools; no Xcode project.
 
 ```bash
-Scripts/test-all.sh            # every test suite
-make dev                       # rebuild and launch the isolated build/Plume Dev.app
-Scripts/build-app.sh --release # assemble build/Plume.app
+make test-all  # every test suite
+make dev       # rebuild and launch the isolated build/Plume Dev.app
+make build     # release build of build/Plume.app
 ```
 
 ## License
