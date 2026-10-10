@@ -16,7 +16,20 @@ permissions:
   contents: write
 
 jobs:
-  test:
+  # PaneKit (Swift) and the editor (node + the WKWebView probe) share nothing, so they are separate
+  # jobs and run alongside each other and the builds.
+  test-kit:
+    if: github.event_name == 'push'
+    runs-on: macos-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Test PaneKit
+        run: Scripts/test.sh
+
+  test-editor:
     if: github.event_name == 'push'
     runs-on: macos-latest
     permissions:
@@ -33,9 +46,6 @@ jobs:
       - name: Install editor dependencies
         run: npm ci --no-audit --no-fund
         working-directory: Editor
-
-      - name: Test PaneKit
-        run: Scripts/test.sh
 
       # Same five suites as CI. The tag is the moment with the least room for "we'll catch it next
       # time", and this workflow used to run the Foundation suite alone — so a tag pushed from a
@@ -61,8 +71,8 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-  # Each architecture gets its own runner and SwiftPM build directory. Tests run alongside them;
-  # only the final job needs all three to succeed before signing and publishing anything.
+  # Each architecture gets its own runner and SwiftPM build directory. Both test jobs run alongside them;
+  # only the final job needs all of them to succeed before signing and publishing anything.
   build:
     if: github.event_name == 'push'
     runs-on: macos-latest
@@ -96,7 +106,7 @@ jobs:
 
   release:
     if: github.event_name == 'push'
-    needs: [test, build]
+    needs: [test-kit, test-editor, build]
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v5
