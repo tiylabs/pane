@@ -109,8 +109,6 @@ Scripts/build-app.sh --release # 构建正式版 build/Plume.app
 开发版使用独立的应用标识和设置，笔记默认存放在 app 同级的 `build/Plume-scratch`，
 `make clean` 会保留这些笔记。默认快捷键为 `⌃⌥⇧Space`，不会退出已运行的正式版。
 
-更多内容见 [CONTRIBUTING.md](CONTRIBUTING.md)。
-
 ## 许可证
 
 MIT，详见 [LICENSE](LICENSE)。应用内打包的第三方组件见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。

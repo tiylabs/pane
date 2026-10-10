@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Checks that commit subjects follow `type(scope): description`, with an optional gitmoji after
-# the colon — the form CONTRIBUTING.md asks for and the history already uses:
+# the colon — the form the history already uses:
 #
 #   feat(settings): ✨ Add adjustable panel opacity
 #   fix: the hotkey gives an unfocused panel the focus back

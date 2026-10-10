@@ -172,8 +172,6 @@ Swift + AppKit owns the panel, hotkey and file I/O; the editor is CodeMirror 6 i
 No Node process, no Rust core, no Electron. The buffer *is* the Markdown source. Live preview
 changes its presentation without converting notes to a separate rich text format.
 
-[CONTRIBUTING.md](CONTRIBUTING.md) has the rest, including what Plume deliberately won't do.
-
 ## License
 
 MIT. See [LICENSE](LICENSE). Third-party components bundled in the app are listed in

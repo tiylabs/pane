@@ -2,13 +2,6 @@ name: Idea
 description: Suggest something Plume should do
 labels: ["idea"]
 body:
-  - type: markdown
-    attributes:
-      value: |
-        Please read the **Deliberately not in scope** list in
-        [CONTRIBUTING.md](../blob/main/CONTRIBUTING.md) first — several popular requests have
-        already been decided against, and the list says which.
-
   - type: textarea
     id: idea
     attributes:
