@@ -4,7 +4,8 @@ on:
   push:
     tags:
       - "v*"
-  # The draft is published by hand after review; that is the moment the Homebrew cask is bumped.
+  # The prerelease is promoted to a full release by hand after review ("Set as the latest release");
+  # `released` fires on that promotion, which is the moment the Homebrew cask is bumped.
   release:
     types: [released]
 
@@ -99,6 +100,9 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          # Release notes are the commits since the previous stable tag, so the tag history is needed.
+          fetch-depth: 0
 
       - name: Download the tested editor bundle
         uses: actions/download-artifact@v4
@@ -242,14 +246,52 @@ jobs:
           # The alias is the whole reason this is an image rather than a zip.
           test "$(readlink /tmp/verify/Applications)" = "/Applications"
 
+      # The notes are the commits between this tag and the previous *stable* tag (vX.Y.Z, no -rc
+      # suffix). A release candidate therefore lists everything since the last stable release, not
+      # just what changed since the previous candidate.
+      - name: Find the previous stable tag
+        id: prev_tag
+        run: |
+          set -euo pipefail
+          # versionsort.suffix makes `v0.2.1075-rc.1` sort *before* `v0.2.1075`, as git would not by
+          # default. Walk the tags oldest to newest and keep the last stable one seen before this tag.
+          PREV_TAG=""
+          while IFS= read -r t; do
+            if [ "$t" = "$GITHUB_REF_NAME" ]; then break; fi
+            if printf '%s' "$t" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then PREV_TAG="$t"; fi
+          done < <(git -c versionsort.suffix=-rc tag -l --sort=v:refname)
+          echo "prev_tag=${PREV_TAG}" >> "$GITHUB_OUTPUT"
+          echo "Current tag: ${GITHUB_REF_NAME}, previous stable tag: ${PREV_TAG:-<none>}"
+
+      - name: Generate the release notes
+        id: changelog
+        if: steps.prev_tag.outputs.prev_tag != ''
+        uses: requarks/changelog-action@v1.10.3
+        with:
+          token: ${{ github.token }}
+          fromTag: ${{ github.ref_name }}
+          toTag: ${{ steps.prev_tag.outputs.prev_tag }}
+          writeToFile: false
+
       - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}
+          # Passed through the environment, never interpolated into the script: it is commit text.
+          NOTES: ${{ steps.changelog.outputs.changes }}
+          PREV_TAG: ${{ steps.prev_tag.outputs.prev_tag }}
         run: |
+          set -euo pipefail
+          if [ -n "$PREV_TAG" ] && [ -n "$NOTES" ]; then
+            printf '%s\n' "$NOTES" > "$RUNNER_TEMP/release-notes.md"
+            NOTES_ARGS=(--notes-file "$RUNNER_TEMP/release-notes.md")
+          else
+            # No earlier stable tag (the very first release) — let GitHub write the notes.
+            NOTES_ARGS=(--generate-notes)
+          fi
           gh release create "$GITHUB_REF_NAME" \
             --title "$GITHUB_REF_NAME" \
-            --generate-notes \
-            --draft \
+            "${NOTES_ARGS[@]}" \
+            --prerelease \
             "build/${{ steps.package.outputs.name }}"
 
           # The sha256 the Homebrew cask needs, in the job log rather than only in the artifact —
@@ -261,14 +303,14 @@ jobs:
           {
             echo "### Pane ${{ steps.version.outputs.version }}"
             echo
-            echo "Release created **as a draft** — review the notes, then publish."
+            echo "Release created **as a prerelease** — review the notes, then promote it to a full release."
             echo
             echo '```'
             echo "asset:  ${{ steps.package.outputs.name }}"
             echo "sha256: ${{ steps.package.outputs.sha256 }}"
             echo '```'
             echo
-            echo "Signed with Developer ID and notarized. Publishing the draft bumps"
+            echo "Signed with Developer ID and notarized. Promoting the prerelease bumps"
             echo "\`Casks/pane.rb\` in \`tiylabs/homebrew-tap\` automatically."
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -280,7 +322,7 @@ jobs:
           fi
           rm -f "$RUNNER_TEMP/signing-certificate.p12"
 
-  # Runs when the draft is published, from the asset people actually download, so the sha256 in the
+  # Runs when the prerelease is promoted to a full release, from the asset people actually download, so the sha256 in the
   # cask is the one of the published bytes.
   update-homebrew:
     if: github.event_name == 'release'
