@@ -127,6 +127,12 @@ body {
 .pane:not([data-focused]):not([data-hover]) .pane__close {
   opacity: 0;
   pointer-events: none;
+  /* Invisible, so it wears the colour it will have on arrival. With the grey it inherits from the rule
+   * above, hovering an unfocused pane faded the dot in while its background transitioned grey → red,
+   * and the grey showed for the length of the transition. Now only the opacity moves. The border is
+   * restored for the same reason: it does not transition, so it would pop in at the first frame. */
+  background: var(--close-dot);
+  border: var(--close-dot-border);
 }
 
 /* Decision 107: the dot answers the pointer, like every other control in the pane did already.
