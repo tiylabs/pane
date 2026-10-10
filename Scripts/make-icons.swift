@@ -9,12 +9,14 @@
 // Run it by hand when the artwork changes; the outputs are committed, so a plain checkout builds
 // without needing to regenerate anything. `Scripts/build-app.sh` picks both of them up on its own.
 //
-//   Design/AppIcon.png      square PNG  ->  Scripts/AppIcon.icns
-//   Design/MenuBarIcon.png  alpha PNG   ->  Resources/MenuBar{,@2x,@3x}.png
+//   Design/AppIcon.png       square PNG      ->  Scripts/AppIcon.icns
+//   Design/MenuBarIcon.png   monochrome PNG  ->  Resources/MenuBar{,@2x,@3x}.png
 //
 // The app export already includes the intended transparent margin: keep its entire canvas and
 // alpha unchanged, and only resample for smaller icon representations. The menu-bar export is
-// fitted separately to its 18-point canvas.
+// fitted separately to its 18-point canvas, and a flattened export — white paper baked in as
+// opaque pixels with the alpha channel dropped — is keyed back to alpha first; see
+// `keyWhitePaper`.
 
 import AppKit
 import CoreGraphics
@@ -157,6 +159,28 @@ func inkBounds(_ bitmap: Bitmap, minimumAlpha: UInt8 = 9) -> CGRect {
     return CGRect(x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY + 1)
 }
 
+/// Keys a flattened white-paper export back into the alpha PNG this pipeline expects.
+///
+/// The menu-bar glyph ships as a template image, so its alpha *is* the mask macOS tints — an
+/// export that arrives with the paper baked in as opaque pixels would put a white square in the
+/// menu bar. Some export presets drop the alpha channel that way, and for a monochrome glyph on
+/// white paper the composite inverts exactly: an observed value `v` between black ink and white
+/// paper is `v = 255 · (1 − a)`, so `a = 255 − v` with the ink left black, and the anti-aliased
+/// edge ring comes back as the soft alpha it was before the export flattened it.
+///
+/// Only fully opaque pixels are keyed, so an export that already carries its own alpha passes
+/// through untouched — black ink on transparent pixels keys to itself.
+func keyWhitePaper(_ bitmap: inout Bitmap) {
+    for i in stride(from: 0, to: bitmap.pixels.count, by: 4) {
+        guard bitmap.pixels[i + 3] == 255 else { continue }
+        let ink = 255 - min(bitmap.pixels[i], min(bitmap.pixels[i + 1], bitmap.pixels[i + 2]))
+        bitmap.pixels[i] = 0
+        bitmap.pixels[i + 1] = 0
+        bitmap.pixels[i + 2] = 0
+        bitmap.pixels[i + 3] = UInt8(ink)
+    }
+}
+
 /// Draws `image`'s `crop` region centred in a `size`² canvas, scaled so its longest side is `fit`.
 func compose(_ image: CGImage, crop: CGRect, canvas: Int, fit: Double) -> CGImage {
     let imageCrop = CGRect(x: crop.minX, y: CGFloat(image.height) - crop.maxY,
@@ -276,15 +300,18 @@ if arguments != ["--menu-only"] {
 if arguments == ["--app-only"] { exit(0) }
 print("==> Menu bar icon")
 
-let menuSource = loadBitmap(design.appendingPathComponent("MenuBarIcon.png"))
+var menuSource = loadBitmap(design.appendingPathComponent("MenuBarIcon.png"))
+keyWhitePaper(&menuSource)
 let menuImage = cgImage(menuSource)
 let glyph = inkBounds(menuSource)
 print("    artwork \(Int(glyph.width))×\(Int(glyph.height))")
 
 // 18 pt is the status-item convention, and the glyph sits at 16 of those 18 so it has the same
-// optical weight as the system items either side of it. Measured stroke is 5.1% of the artwork's
-// width, which lands at ~1.8 px at @2x — in the same range as the SF Symbols it sits next to, so
-// the outline holds up at this size without being thickened.
+// optical weight as the system items either side of it. The current artwork is a filled
+// silhouette whose finest features are the paper's cut lines — 41 px in the 2048 px export, about
+// 0.6 px at @2x — with the gap between the scroll and the quill at 131 px, about 2 px. Those sit
+// in the same range as the details on the SF Symbols beside it, so the shapes hold up at this
+// size without being thickened.
 for scale in 1...3 {
     let suffix = scale == 1 ? "" : "@\(scale)x"
     writePNG(
