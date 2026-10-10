@@ -66,10 +66,10 @@ export function run(view, bar, doc) {
   const search = doc.getElementById("switcher-search");
 
   function openWith(count) {
-    if (!doc.querySelector(".pane").hasAttribute("data-switcher")) {
+    if (!doc.querySelector(".plume").hasAttribute("data-switcher")) {
       doc.getElementById("browse").click();
     }
-    window.paneHost.showNotes(notes(count), count, "");
+    window.plumeHost.showNotes(notes(count), count, "");
     list.scrollTop = 0;
   }
 
@@ -239,8 +239,8 @@ export function run(view, bar, doc) {
 
   // ---- The two overlays are one rectangle ---------------------------------------------------------
   //
-  // The pane grows to hold whichever panel is open (decision 45), so a panel's height is a window
-  // size. ⌘K had no ceiling at all and asked the pane for 744pt to show sixteen rows of menu, while
+  // The panel grows to hold whichever panel is open (decision 45), so a panel's height is a window
+  // size. ⌘K had no ceiling at all and asked the panel for 744pt to show sixteen rows of menu, while
   // ⌘P asked for 676 — two different windows for the same slot. The ceiling is on the panels rather
   // than on the lists inside them precisely so that this assertion can exist: the switcher carries a
   // footer ⌘K does not, so equal lists would mean unequal panels.
@@ -293,9 +293,9 @@ export function run(view, bar, doc) {
   // the first few keystrokes can reach, so the number is the worst case rather than the best: at
   // 380px this read four at rest and three at `scrollTop: 39`.
   {
-    if (!doc.querySelector(".pane").hasAttribute("data-switcher")) doc.getElementById("browse").click();
+    if (!doc.querySelector(".plume").hasAttribute("data-switcher")) doc.getElementById("browse").click();
     const banded = realisticallyBandedNotes();
-    window.paneHost.showNotes(banded, banded.length, "");
+    window.plumeHost.showNotes(banded, banded.length, "");
 
     const MINIMUM = 5;
     let worst = Infinity;
@@ -331,7 +331,7 @@ export function run(view, bar, doc) {
 
   // ---- The ceiling is a ceiling, not a height ------------------------------------------------------
   //
-  // A pane must not grow for rows that are not there. Four notes get a four-note switcher, and a ⌘K
+  // A panel must not grow for rows that are not there. Four notes get a four-note switcher, and a ⌘K
   // filtered down to a couple of rows is a couple of rows tall.
   {
     actionsSearch.value = "note";
@@ -358,16 +358,16 @@ export function run(view, bar, doc) {
     doc.getElementById("open-actions").click();
   }
 
-  // ---- neither panel resizes the pane while you are typing in it ---------------------------------
+  // ---- neither panel resizes the panel while you are typing in it ---------------------------------
   //
   // The two disagreed, and only one of them had written down a rule. The switcher reports the height
   // it wants **once per opening** — `reportHeight`, guarded by `heightReported` — on the grounds that
   // a window resizing on every keystroke of a search will not sit still. ⌘K re-reported on every
   // `input`, exempted because it "has fourteen rows and settles".
   //
-  // That exemption was sound while the action list had no cap: the pane was sized to the note, and
+  // That exemption was sound while the action list had no cap: the panel was sized to the note, and
   // filtering sixteen rows to two barely moved it. Decision 114 gave it a ceiling, so opening ⌘K
-  // grows the pane to 627pt and two typed characters collapsed it to the height of two rows — the
+  // grows the panel to 627pt and two typed characters collapsed it to the height of two rows — the
   // whole window jumping while the reader's eyes are on a menu. Reported from the build, on ⌘K only,
   // with ⌘P beside it doing the right thing.
   //
@@ -378,8 +378,8 @@ export function run(view, bar, doc) {
     const sent = [];
     const host = (window.webkit ??= {});
     const handlers = (host.messageHandlers ??= {});
-    const real = handlers.pane;
-    handlers.pane = { postMessage: (m) => { sent.push(m); real?.postMessage?.(m); } };
+    const real = handlers.plume;
+    handlers.plume = { postMessage: (m) => { sent.push(m); real?.postMessage?.(m); } };
 
     const typeInto = (field, text) => {
       field.value = text;
@@ -398,7 +398,7 @@ export function run(view, bar, doc) {
       for (const q of ["n", "no", "not"]) typeInto(field, q);
       const whileTyping = sent.filter((m) => m.type === type);
       check(
-        `${name} does not resize the pane while you type in it`,
+        `${name} does not resize the panel while you type in it`,
         `no height reported after opening at ${Math.round(atOpen?.height ?? 0)}pt`,
         whileTyping.length === 0
           ? "none"
@@ -408,8 +408,8 @@ export function run(view, bar, doc) {
       typeInto(field, "");
     }
 
-    if (real) handlers.pane = real;
-    else delete handlers.pane;
+    if (real) handlers.plume = real;
+    else delete handlers.plume;
     press("Escape");
     doc.getElementById("open-actions").click();
   }
@@ -447,26 +447,26 @@ export function run(view, bar, doc) {
   // move the text above by a pixel" — and they differed by one, because the format bar carried
   // `height` and `border-top` on one element (border inside, under `border-box`) while the find bar
   // put the border on its container and the height on its child, so it added on top. Opening find
-  // grew the pane by 5 where the format bar grew it by 4. Found by a T1 checklist item that
+  // grew the panel by 5 where the format bar grew it by 4. Found by a T1 checklist item that
   // predicted 4 and was written off as stale wording.
   {
-    const pane = doc.querySelector(".pane");
+    const plume = doc.querySelector(".plume");
     const heightOf = (sel) => {
       const el = doc.querySelector(sel);
       return el ? +el.getBoundingClientRect().height.toFixed(2) : null;
     };
 
-    pane.removeAttribute("data-find");
-    pane.removeAttribute("data-format-bar");
-    const footer = heightOf(".pane__footer");
+    plume.removeAttribute("data-find");
+    plume.removeAttribute("data-format-bar");
+    const footer = heightOf(".plume__footer");
 
-    pane.setAttribute("data-format-bar", "");
+    plume.setAttribute("data-format-bar", "");
     const formatBar = heightOf(".format-bar");
-    pane.removeAttribute("data-format-bar");
+    plume.removeAttribute("data-format-bar");
 
-    pane.setAttribute("data-find", "");
+    plume.setAttribute("data-find", "");
     const findBar = heightOf(".find");
-    pane.removeAttribute("data-find");
+    plume.removeAttribute("data-find");
 
     check(
       "the find bar and the format bar are the same row",
@@ -487,7 +487,7 @@ export function run(view, bar, doc) {
     // wrong by design, and inert anyway, because `.find__row--replace` is restated further down at
     // equal specificity and source order decided. Both rows carry one border and both measure the
     // format bar's row.
-    pane.setAttribute("data-find", "");
+    plume.setAttribute("data-find", "");
     doc.querySelector(".find").setAttribute("data-replace", "");
     const searchRow = heightOf(".find__row:not(.find__row--replace)");
     const replaceRow = heightOf(".find__row--replace");
@@ -495,7 +495,7 @@ export function run(view, bar, doc) {
       doc.querySelector(".find__row--replace")
     ).borderTopWidth;
     doc.querySelector(".find").removeAttribute("data-replace");
-    pane.removeAttribute("data-find");
+    plume.removeAttribute("data-find");
 
     check(
       "the replace row keeps the divider between the two rows",
@@ -520,8 +520,8 @@ export function run(view, bar, doc) {
     const sent = [];
     const host = (window.webkit ??= {});
     const handlers = (host.messageHandlers ??= {});
-    const real = handlers.pane;
-    handlers.pane = { postMessage: (m) => { sent.push(m); real?.postMessage?.(m); } };
+    const real = handlers.plume;
+    handlers.plume = { postMessage: (m) => { sent.push(m); real?.postMessage?.(m); } };
     const key = (init) =>
       search.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, cancelable: true, ...init }));
     const deletes = () => sent.filter((m) => m.type === "deleteNote" || m.type === "forgetDeleted");
@@ -548,7 +548,7 @@ export function run(view, bar, doc) {
     actionsSearch.value = "Recently Deleted";
     actionsSearch.dispatchEvent(new Event("input", { bubbles: true }));
     actionsSearch.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
-    window.paneHost.showDeleted(notes(3));
+    window.plumeHost.showDeleted(notes(3));
     sent.length = 0;
     key({ key: "x", ctrlKey: true });
     check(
@@ -559,8 +559,8 @@ export function run(view, bar, doc) {
     );
     check("(182) …and that list really was open", "deleted rows", doc.querySelector("[data-forget]") ? "deleted rows" : "no deleted rows", !!doc.querySelector("[data-forget]"));
 
-    if (real) handlers.pane = real;
-    else delete handlers.pane;
+    if (real) handlers.plume = real;
+    else delete handlers.plume;
     press("Escape");
   }
 

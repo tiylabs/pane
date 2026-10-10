@@ -39,7 +39,7 @@ const KEYCODE = {
  * A driver that types the way a person does.
  *
  * `view.dispatch` is not typing. Real input reaches CodeMirror through the `inputHandler` facet
- * first, and Pane puts two rules in there — the one that makes `[] ` a checkbox and the one that
+ * first, and Plume puts two rules in there — the one that makes `[] ` a checkbox and the one that
  * makes a new bullet take the marker the list above it is using (decision 59). A case that
  * dispatched its text straight into the document would skip both and quietly test nothing.
  *
@@ -57,7 +57,7 @@ function driver(view, doc) {
       const handlers = view.state.facet(EditorView.inputHandler);
       // The fifth argument is CodeMirror's `defaultInsert`, and it has to be the real thing: it
       // returns the transaction the plain insert *would* have made, and `autoCloseTags` — which is
-      // live in Pane, because markdown embeds HTML — reads `.state` off it. A stand-in returning a
+      // live in Plume, because markdown embeds HTML — reads `.state` off it. A stand-in returning a
       // plain object throws on every `>` that closes a tag, which is one confident false bug report
       // this file already produced.
       const defaultInsert = () => view.state.update({
@@ -155,11 +155,11 @@ function inspector(view, doc) {
     return node.closest(".cm-line");
   };
 
-  /** Every `pane-line-li-N` class on the line, in the order the DOM carries them. */
+  /** Every `plume-line-li-N` class on the line, in the order the DOM carries them. */
   const depthClasses = (n) => {
     const el = lineEl(n);
     if (!el) return [];
-    return [...el.classList].filter((c) => /^pane-line-li-\d$/.test(c)).map((c) => Number(c.slice(-1)));
+    return [...el.classList].filter((c) => /^plume-line-li-\d$/.test(c)).map((c) => Number(c.slice(-1)));
   };
 
   /**
@@ -183,18 +183,18 @@ function inspector(view, doc) {
     // A bullet is a drawn shape rather than a character now (decision 122), so what identifies it
     // is which shape was asked for. The three names stand in for the three glyphs that used to be
     // set here, so the cases below still read as "level two draws a ring".
-    const bullet = el.querySelector(".pane-list-marker");
+    const bullet = el.querySelector(".plume-list-marker");
     if (bullet) {
-      const depth = [...bullet.classList].find((c) => c.startsWith("pane-bullet-"));
-      return { "pane-bullet-1": "•", "pane-bullet-2": "◦", "pane-bullet-3": "▪" }[depth] ?? "?";
+      const depth = [...bullet.classList].find((c) => c.startsWith("plume-bullet-"));
+      return { "plume-bullet-1": "•", "plume-bullet-2": "◦", "plume-bullet-3": "▪" }[depth] ?? "?";
     }
-    const number = el.querySelector(".pane-list-number");
+    const number = el.querySelector(".plume-list-number");
     if (number) return number.textContent.trim();
-    const task = el.querySelector(".pane-task");
+    const task = el.querySelector(".plume-task");
     if (task) return task.className.includes("--done") ? "[x]" : "[ ]";
     // The marker and its space are two boxes (decision 145); this reader is asked for both.
-    const raw = el.querySelector(".pane-syntax-listmark");
-    if (raw) return `raw:${raw.textContent}${el.querySelector(".pane-syntax-listgap")?.textContent ?? ""}`;
+    const raw = el.querySelector(".plume-syntax-listmark");
+    if (raw) return `raw:${raw.textContent}${el.querySelector(".plume-syntax-listgap")?.textContent ?? ""}`;
     return "";
   };
 
@@ -212,7 +212,7 @@ function inspector(view, doc) {
   const textEdge = (n) => {
     const el = lineEl(n);
     if (!el) return null;
-    const skip = new Set(["pane-list-marker", "pane-list-number", "pane-list-gap", "pane-task", "pane-syntax-listmark", "pane-syntax-listgap"]);
+    const skip = new Set(["plume-list-marker", "plume-list-number", "plume-list-gap", "plume-task", "plume-syntax-listmark", "plume-syntax-listgap"]);
     for (const node of el.childNodes) {
       if (node.nodeType === 1 && [...node.classList].some((c) => skip.has(c))) continue;
       const range = doc.createRange();
@@ -239,10 +239,10 @@ function inspector(view, doc) {
    * number while markers were left-aligned in the slot, and the reference's 6.5 is the second one. */
   const markerInk = (n) => {
     const el = lineEl(n);
-    const marker = el?.querySelector(".pane-list-marker, .pane-list-number, .pane-task");
+    const marker = el?.querySelector(".plume-list-marker, .plume-list-number, .plume-task");
     if (!marker) return null;
     const rect = (() => {
-      if (marker.classList.contains("pane-task")) return marker.getBoundingClientRect();
+      if (marker.classList.contains("plume-task")) return marker.getBoundingClientRect();
       // A drawn bullet has no text to measure, and its shape is centred in the box by the
       // stylesheet, so the box's centre *is* the ink's centre. Width is the shape's, not the box's.
       // The drawn shape is a real element precisely so it can be measured here.
@@ -270,8 +270,8 @@ function inspector(view, doc) {
    * bottom of its line passed all of them. Reported on sight: "why are the two dots much lower". */
   const textMiddle = (n) => {
     const el = lineEl(n);
-    const skip = ["pane-list-marker","pane-list-number","pane-list-gap","pane-task","pane-syntax-listmark","pane-syntax-listgap",
-                  "pane-syntax-taskmark"];
+    const skip = ["plume-list-marker","plume-list-number","plume-list-gap","plume-task","plume-syntax-listmark","plume-syntax-listgap",
+                  "plume-syntax-taskmark"];
     const walker = doc.createTreeWalker(el, NodeFilter.SHOW_TEXT);
     let node;
     while ((node = walker.nextNode())) {
@@ -310,7 +310,7 @@ function inspector(view, doc) {
   };
 
   /** Every decoration class on the line, so a construct can say what it rendered as. */
-  const classes = (n) => [...lineEl(n).classList].filter((c) => c.startsWith("pane-")).sort().join(" ");
+  const classes = (n) => [...lineEl(n).classList].filter((c) => c.startsWith("plume-")).sort().join(" ");
 
   /** Everything the line actually puts on screen. `hide` is a replace decoration, so hidden source
    * is not in the DOM at all and `textContent` is already the truth. */
@@ -421,7 +421,7 @@ export function runTypedLists(view, doc) {
   r.check("three numbered levels", "1. one\n   1. two\n      1. three", d.text(),
     "1. one ⏎ ⇥ two ⏎ ⇥ three");
 
-  // Four, because `pane-line-li-4` exists and something has to reach it.
+  // Four, because `plume-line-li-4` exists and something has to reach it.
   d.reset();
   d.type("- one");
   d.press("Enter"); d.press("Tab"); d.type("two");
@@ -557,7 +557,7 @@ export function runTypedLists(view, doc) {
   // --- a marker typed into an item is text (decisions 135, 158) ----------------------------------
   //
   // `1. 1. three` is a nested list to CommonMark, which is never what anybody means by it — a
-  // nested list is made with ⇥. 135 wrote a backslash to say so; since 158 Pane's parser reads a
+  // nested list is made with ⇥. 135 wrote a backslash to say so; since 158 Plume's parser reads a
   // second marker on an item's line as text, and the bytes are exactly what was typed.
 
   const typedAsText = (name, keys, want, n = 1) => {
@@ -565,7 +565,7 @@ export function runTypedLists(view, doc) {
     keys();
     r.check(name, want, d.text(), show(want));
     r.check(`${name}: one marker is drawn`, 1,
-      i.lineEl(n).querySelectorAll(".pane-list-marker, .pane-list-number, .pane-task").length);
+      i.lineEl(n).querySelectorAll(".plume-list-marker, .plume-list-number, .plume-task").length);
   };
   typedAsText("(158) a number typed into an item is text", () => d.type("1. 1. 3 dollars"), "1. 1. 3 dollars");
   typedAsText("(158) and a number with no space after it too", () => d.type("1. 1.3 dollars"), "1. 1.3 dollars");
@@ -588,7 +588,7 @@ export function runTypedLists(view, doc) {
   //
   // A list item holds text. A block marker typed after an item's marker — a rule, a quote, a
   // heading, a fence, a checkbox after a number — is text, and the file holds exactly what was
-  // typed: Pane's parser reads it that way (158), where 155 wrote a backslash. Reported from use:
+  // typed: Plume's parser reads it that way (158), where 155 wrote a backslash. Reported from use:
   // `- --` became a rule and ate the bullet, `- >` a quote, `1. ---` a rule inside the item, and
   // spaces after `- ` an indented code block.
 
@@ -598,16 +598,16 @@ export function runTypedLists(view, doc) {
     r.check(name, want, d.text(), show(want));
     const line = n ?? view.state.doc.lineAt(view.state.selection.main.head).number;
     r.check(`${name}: the line is still an item`, true,
-      !!i.lineEl(line).querySelector(".pane-list-marker, .pane-list-number, .pane-task"), i.lineEl(line).className);
+      !!i.lineEl(line).querySelector(".plume-list-marker, .plume-list-number, .plume-task"), i.lineEl(line).className);
     if (!forbidden) return;
     const hit = [...doc.querySelectorAll(".cm-line")].find((el) => el.classList.contains(forbidden));
     r.check(`${name}: nothing draws as ${forbidden}`, false, !!hit, hit ? hit.className : "");
   };
 
-  oneItem("(158) `- --` is a bullet holding dashes", () => d.type("- --"), "- --", "pane-rule");
-  oneItem("(158) and `- ---` too, with the caret left on its line", () => d.type("- ---x"), "- ---x", "pane-rule");
+  oneItem("(158) `- --` is a bullet holding dashes", () => d.type("- --"), "- --", "plume-rule");
+  oneItem("(158) and `- ---` too, with the caret left on its line", () => d.type("- ---x"), "- ---x", "plume-rule");
   oneItem("(158) `---` on a continued bullet", () => { d.type("- a"); d.press("Enter"); d.type("---"); },
-    "- a\n- ---", "pane-rule");
+    "- a\n- ---", "plume-rule");
   oneItem("(158) …and it is the same list, not a second one", () => { d.type("- a"); d.press("Enter"); d.type("---"); },
     "- a\n- ---", null);
   r.check("(158) one list, not two", 1, (() => {
@@ -619,27 +619,27 @@ export function runTypedLists(view, doc) {
     return lists;
   })());
   oneItem("(158) `---` on a numbered item", () => { d.type("1. a"); d.press("Enter"); d.type("---"); },
-    "1. a\n2. ---", "pane-rule");
+    "1. a\n2. ---", "plume-rule");
   oneItem("(158) `---` on a nested item", () => { d.type("- a"); d.press("Enter"); d.press("Tab"); d.type("---"); },
-    "- a\n  - ---", "pane-rule");
-  oneItem("(158) `***` on a bullet", () => d.type("- ***"), "- ***", "pane-rule");
-  oneItem("(158) `>` on a bullet", () => d.type("- > x"), "- > x", "pane-line-quote");
-  oneItem("(158) `>` on a numbered item", () => d.type("1. > x"), "1. > x", "pane-line-quote");
-  oneItem("(158) `#` on a bullet", () => d.type("- # x"), "- # x", "pane-line-h1");
-  oneItem("(158) a fence on a bullet", () => d.type("- ```"), "- ```", "pane-line-code");
+    "- a\n  - ---", "plume-rule");
+  oneItem("(158) `***` on a bullet", () => d.type("- ***"), "- ***", "plume-rule");
+  oneItem("(158) `>` on a bullet", () => d.type("- > x"), "- > x", "plume-line-quote");
+  oneItem("(158) `>` on a numbered item", () => d.type("1. > x"), "1. > x", "plume-line-quote");
+  oneItem("(158) `#` on a bullet", () => d.type("- # x"), "- # x", "plume-line-h1");
+  oneItem("(158) a fence on a bullet", () => d.type("- ```"), "- ```", "plume-line-code");
   oneItem("(158) `[] ` on a bullet stays text", () => d.type("- [] x"), "- [] x", null);
   oneItem("(158) `[] ` on a numbered item stays text", () => d.type("1. [] x"), "1. [] x", null);
-  oneItem("(158) `[x] ` on a numbered item is text, not a box", () => d.type("1. [x] x"), "1. [x] x", "pane-task", 1);
-  r.check("(158) …no box is drawn", 0, doc.querySelectorAll(".pane-task").length);
+  oneItem("(158) `[x] ` on a numbered item is text, not a box", () => d.type("1. [x] x"), "1. [x] x", "plume-task", 1);
+  r.check("(158) …no box is drawn", 0, doc.querySelectorAll(".plume-task").length);
   oneItem("(158) a setext underline under an item's text", () => {
     d.type("- a"); d.press("Enter", { shiftKey: true }); d.type("---");
-  }, "- a\n  ---", "pane-line-h2", 1);
-  oneItem("(158) spaces after `- ` stay spaces, not code", () => d.type("-      x"), "-      x", "pane-line-code");
-  oneItem("(158) nor after `1. `", () => d.type("1.      x"), "1.      x", "pane-line-code");
+  }, "- a\n  ---", "plume-line-h2", 1);
+  oneItem("(158) spaces after `- ` stay spaces, not code", () => d.type("-      x"), "-      x", "plume-line-code");
+  oneItem("(158) nor after `1. `", () => d.type("1.      x"), "1.      x", "plume-line-code");
   // What it leaves alone.
   oneItem("(158) `[] ` on an empty line still makes a task", () => d.type("[] x"), "- [ ] x", null);
   oneItem("(158) `- [ ] ` typed by hand is a to-do: those are its bytes", () => d.type("- [ ] x"), "- [ ] x", null);
-  r.check("(158) …and draws its box", 1, doc.querySelectorAll(".pane-task").length);
+  r.check("(158) …and draws its box", 1, doc.querySelectorAll(".plume-task").length);
   oneItem("(158) bold at an item's start is inline", () => d.type("- **b** x"), "- **b** x", null);
   oneItem("(158) a link at an item's start is untouched", () => d.type("- [a](b) x"), "- [a](b) x", null);
 
@@ -649,18 +649,18 @@ export function runTypedLists(view, doc) {
   // `1.` a number and `>` a quote bar — before the space that says the marker is meant. Each is text
   // until the space arrives, the way `[] ` already was. Typed at the note's start and under a
   // paragraph, because those are different paths through the parser.
-  const BLOCK = /pane-line-h\d|pane-line-quote|pane-line-li|pane-line-code|pane-rule/;
+  const BLOCK = /plume-line-h\d|plume-line-quote|plume-line-li|plume-line-code|plume-rule/;
   for (const lone of ["#", "##", "###", "-", "*", "+", "1.", "1)", ">", ">>"]) {
     for (const [where, keys, n] of [["alone", () => {}, 1], ["under a paragraph", () => { d.type("para"); d.press("Enter"); }, 3]]) {
       d.reset(); keys(); d.type(lone);
       r.check(`(158) \`${lone}\` ${where} is text`, lone, i.visibleText(n), i.classes(n));
       r.check(`(158) \`${lone}\` ${where} draws no block`, false, BLOCK.test(i.classes(n)), i.classes(n));
       r.check(`(158) \`${lone}\` ${where} draws no marker`, 0,
-        i.lineEl(n).querySelectorAll(".pane-list-marker, .pane-list-number, .pane-task").length);
+        i.lineEl(n).querySelectorAll(".plume-list-marker, .plume-list-number, .plume-task").length);
     }
   }
-  for (const [typed, cls] of [["# x", "pane-line-h1"], ["## x", "pane-line-h2"], ["- x", "pane-line-li"],
-                              ["1. x", "pane-line-li"], ["> x", "pane-line-quote"], [">> x", "pane-line-quote"]]) {
+  for (const [typed, cls] of [["# x", "plume-line-h1"], ["## x", "plume-line-h2"], ["- x", "plume-line-li"],
+                              ["1. x", "plume-line-li"], ["> x", "plume-line-quote"], [">> x", "plume-line-quote"]]) {
     d.reset(); d.type(typed);
     r.check(`(158) with its space \`${typed}\` is the block`, true, i.classes(1).includes(cls), i.classes(1));
   }
@@ -670,9 +670,9 @@ export function runTypedLists(view, doc) {
   }
 
   // --- a quote holds lists (158) -----------------------------------------------------------------------
-  for (const [typed, forbidden] of [["> # x", "pane-line-h1"], ["> ---", "pane-rule"], ["> ```", "pane-line-code"]]) {
+  for (const [typed, forbidden] of [["> # x", "plume-line-h1"], ["> ---", "plume-rule"], ["> ```", "plume-line-code"]]) {
     d.reset(); d.type(typed);
-    r.check(`(158) \`${typed}\` is a quote holding text`, true, i.classes(1).includes("pane-line-quote"), i.classes(1));
+    r.check(`(158) \`${typed}\` is a quote holding text`, true, i.classes(1).includes("plume-line-quote"), i.classes(1));
     r.check(`(158) …not ${forbidden}`, false, i.classes(1).includes(forbidden), i.classes(1));
   }
   d.reset(); d.type("> - x");
@@ -762,11 +762,11 @@ export function runTypedLists(view, doc) {
 
 /**
  * Bytes are half the claim. These load documents another markdown tool would have written and ask
- * what Pane draws: which level each line is indented to, what stands in for its marker, and whether
+ * what Plume draws: which level each line is indented to, what stands in for its marker, and whether
  * the source that should be hidden is hidden.
  *
  * The severe case is the last one. If a document whose bytes are flat renders as nested, then what
- * you see in Pane is not what the file says, and the file is what you own (decision 1).
+ * you see in Plume is not what the file says, and the file is what you own (decision 1).
  */
 export function runListStructure(view, doc) {
   const r = recorder("list rendering");
@@ -811,7 +811,7 @@ export function runListStructure(view, doc) {
   r.check("an unticked box draws unticked", "[ ]", i.marker(1));
   r.check("a ticked box draws ticked", "[x]", i.marker(2));
   r.check("a ticked item's text is struck", true,
-    !!i.lineEl(2).querySelector(".pane-task-done-text"));
+    !!i.lineEl(2).querySelector(".plume-task-done-text"));
 
   const MIXED = "- one\n  1. two\n  2. three\n     - four\n\npara\n";
   d.load(MIXED);
@@ -826,12 +826,12 @@ export function runListStructure(view, doc) {
   d.load("> - one\n> - two\n\npara\n");
   d.at("para");
   r.check("a list inside a quote is still a list", 1, i.renderedDepth(1));
-  r.check("and the line is still a quote", true, i.classes(1).includes("pane-line-quote"));
+  r.check("and the line is still a quote", true, i.classes(1).includes("plume-line-quote"));
 
   // --- two markers on one line, and a numbered to-do (decision 135) ------------------------------
   //
   // Both of these are documents another tool can hand us, so they are loaded rather than typed —
-  // the input rule above stops Pane writing the first one, and cannot stop it arriving.
+  // the input rule above stops Plume writing the first one, and cannot stop it arriving.
 
   // A line has one marker slot, so a one-line nesting draws the **outer** marker in it and leaves
   // the inner one literal. Both boxed paint on top of each other — measured, both at x=46 — and
@@ -842,13 +842,13 @@ export function runListStructure(view, doc) {
   d.load("1. 1. three\n\npara\n");
   d.at("para");
   r.check("a list nested on one line reads as its own characters", "1. 1. three", i.visibleText(1));
-  r.check("and boxes one marker, not two", 1, boxed(1, ".pane-list-number"));
+  r.check("and boxes one marker, not two", 1, boxed(1, ".plume-list-number"));
 
   d.load("- * three\n\npara\n");
   d.at("para");
   r.check("the bullet equivalent keeps its inner marker as text", "* three",
     i.visibleText(1).replace("•", ""));
-  r.check("and boxes one bullet, not two", 1, boxed(1, ".pane-list-marker"));
+  r.check("and boxes one bullet, not two", 1, boxed(1, ".plume-list-marker"));
 
   // A checkbox stands in for a bullet, which says only "an item". A number also says which item.
   //
@@ -866,17 +866,17 @@ export function runListStructure(view, doc) {
   d.load("1. [ ] one\n2. [x] two\n\npara\n");
   d.at("para");
   r.check("(158) a numbered line with brackets keeps its number", "1.",
-    i.lineEl(1).querySelector(".pane-list-number")?.textContent.trim());
-  r.check("(158) …and draws no box", 0, doc.querySelectorAll(".pane-task").length);
+    i.lineEl(1).querySelector(".plume-list-number")?.textContent.trim());
+  r.check("(158) …and draws no box", 0, doc.querySelectorAll(".plume-task").length);
   r.check("(158) …its brackets are text", "[ ] one", i.visibleText(1).replace(/^1\.\s*/, ""));
 
   // The bullet's to-do: the box *is* the item's marker, so it keeps the slot.
   d.load("- [ ] one\n- two\n\npara\n");
   d.at("para");
   r.check("a bulleted to-do draws no bullet beside its box", 0,
-    i.lineEl(1).querySelectorAll(".pane-list-marker").length);
+    i.lineEl(1).querySelectorAll(".plume-list-marker").length);
   r.check("and its box is in the marker slot", true,
-    Math.abs(rect(1, ".pane-task").left - rect(2, ".pane-list-marker").left) < 12);
+    Math.abs(rect(1, ".plume-task").left - rect(2, ".plume-list-marker").left) < 12);
 
   // --- the caret's line looks like every other (151) ---------------------------------------------
 
@@ -889,8 +889,8 @@ export function runListStructure(view, doc) {
   // --- what a flat document must not look like -----------------------------------------------------
   //
   // `  2. bravo` under `1. alpha` is indented two spaces where the parent's content starts at three,
-  // so every markdown tool reads the two lines as siblings of one list. If Pane draws the second one
-  // indented, the pane and the file disagree — which is the one failure decision 1 cannot absorb.
+  // so every markdown tool reads the two lines as siblings of one list. If Plume draws the second one
+  // indented, the panel and the file disagree — which is the one failure decision 1 cannot absorb.
   d.load("1. alpha\n  2. bravo\n\npara\n");
   d.at("para");
   r.check("two spaces under `1. ` is not a nested list", 1, i.renderedDepth(2));
@@ -908,7 +908,7 @@ export function runListStructure(view, doc) {
 
   // A line typed straight after a list item or a quote with no blank line between them is a **lazy
   // continuation** of that block, not a new paragraph. Every markdown tool reads it that way, so
-  // Pane has to draw it that way — and the fact that it does is what makes leaving a block without
+  // Plume has to draw it that way — and the fact that it does is what makes leaving a block without
   // a blank line a correctness problem rather than a formatting preference.
   d.load("- one\npara\n");
   d.at("one", 1);
@@ -917,7 +917,7 @@ export function runListStructure(view, doc) {
   d.load("> quoted\nout\n");
   d.at("quoted", 2);
   r.check("a line after a quote renders as part of the quote", true,
-    i.classes(2).includes("pane-line-quote"));
+    i.classes(2).includes("plume-line-quote"));
 
   return { checked: r.checked, failures: r.failures };
 }
@@ -990,7 +990,7 @@ export function runListGeometry(view, doc) {
   
   // The reference's own figures are a marker at 31 with paragraph text at 24.5 — so its marker
   // leads by 6.5. The absolute numbers are not comparable between the two: the text column is
-  // centred with `margin: 0 auto`, so where it starts moves with the pane's width, and the
+  // centred with `margin: 0 auto`, so where it starts moves with the panel's width, and the
   // reference was measured in a 496pt window. The **lead** is comparable, and ours was 10.
   //
   // **Superseded by decision 122, and the assertion changes with it.** 6.5 is where a *bullet's
@@ -1084,7 +1084,7 @@ export function runListGeometry(view, doc) {
   // to the rendered one, which now holds the caret's line too.
   const numberRule = [...doc.styleSheets]
     .flatMap((sheet) => { try { return [...sheet.cssRules]; } catch { return []; } })
-    .find((rule) => (rule.selectorText ?? "").replace(/\s+/g, " ") === ".pane-list-marker, .pane-list-number");
+    .find((rule) => (rule.selectorText ?? "").replace(/\s+/g, " ") === ".plume-list-marker, .plume-list-number");
   r.check("the rendered marker box is declared", true, !!numberRule);
   r.check("the rendered marker box sets no fixed width",
     "", numberRule ? numberRule.style.getPropertyValue("width") : "?");
@@ -1237,7 +1237,7 @@ export function runBlockEdges(view, doc) {
   // 147: an unclosed block's last line is code, not a collapsed fence.
   d.load("```\ncode\n```a\n\nPARA\n"); d.at("PARA");
   r.check("a closing fence somebody typed on is a code line at code height (147)", i.height(2), i.height(3));
-  r.check("…and carries no fence class", false, i.classes(3).includes("pane-line-fence"));
+  r.check("…and carries no fence class", false, i.classes(3).includes("plume-line-fence"));
   d.at("```a", 4); d.press("Enter", { shiftKey: true }); d.type("out");
   r.check("⇧⏎ from it closes the block and lands outside it (147)", "```\ncode\n```a\n```\n\nout\n\nPARA\n", d.text(), "```a ⇧⏎ out");
 
@@ -1258,7 +1258,7 @@ export function runBlockEdges(view, doc) {
     ["⌘E", () => key("e", { metaKey: true }), "`a`"],
     ["⌘U", () => key("u", { metaKey: true }), "<u>a</u>"],
   ];
-  const pendingDrawn = () => [...i.lineEl(3).querySelectorAll(".pane-pending-mark")].map((el) => el.textContent).join("");
+  const pendingDrawn = () => [...i.lineEl(3).querySelectorAll(".plume-pending-mark")].map((el) => el.textContent).join("");
   for (const [name, press, want] of pending) {
     d.reset(); d.type("x"); d.press("Enter"); press();
     r.check(`${name} on an empty line writes nothing (148)`, "x\n\n", d.text(), name);
@@ -1266,7 +1266,7 @@ export function runBlockEdges(view, doc) {
     const open = want.slice(0, want.indexOf("a"));
     r.check(`…and the waiting pair is drawn beside the caret`, want.replace("a", ""), pendingDrawn(), name);
     r.check(`…drawn, not written`, "x\n\n", d.text(), `${name} (${open})`);
-    r.check(`…and the line is not a block`, false, /pane-line-code|pane-rule|pane-line-h/.test(i.classes(3)), `${name}: ${i.classes(3)}`);
+    r.check(`…and the line is not a block`, false, /plume-line-code|plume-rule|plume-line-h/.test(i.classes(3)), `${name}: ${i.classes(3)}`);
     d.type("a");
     r.check(`…the first character arrives wrapped`, `x\n\n${want}`, d.text(), `${name} a`);
     r.check(`…with the caret before the closing marker`, 3 + want.length - (want.length - 1 - want.indexOf("a")), head(), `${name} a`);
@@ -1277,7 +1277,7 @@ export function runBlockEdges(view, doc) {
   for (const marker of ["1. ", "- ", "> ", "- [ ] "]) {
     d.reset(); d.type("x"); d.press("Enter"); d.type(marker === "- [ ] " ? "[] " : marker); key("b", { metaKey: true });
     r.check(`⌘B after \`${marker}\` writes nothing (148)`, `x\n\n${marker}`, d.text(), `${marker}⌘B`);
-    r.check(`…and the line is still the item, not a rule`, false, i.classes(3).includes("pane-rule"), `${marker}: ${i.classes(3)}`);
+    r.check(`…and the line is still the item, not a rule`, false, i.classes(3).includes("plume-rule"), `${marker}: ${i.classes(3)}`);
     d.type("a");
     r.check(`…the first character arrives wrapped`, `x\n\n${marker}**a**`, d.text(), `${marker}⌘B a`);
   }
@@ -1316,12 +1316,12 @@ export function runBlockEdges(view, doc) {
   // dash and turned the rule back into text.
   for (const rule of ["---", "***", "___"]) {
     d.reset(); d.type(rule);
-    r.check(`(159) \`${rule}\` as the note's first line is text`, false, i.classes(1).includes("pane-rule"), i.classes(1));
+    r.check(`(159) \`${rule}\` as the note's first line is text`, false, i.classes(1).includes("plume-rule"), i.classes(1));
     r.check(`(159) …and reads as typed`, rule, i.visibleText(1));
   }
   d.load("a\n"); view.dispatch({ selection: { anchor: 0 } });
   d.type("---\n");
-  r.check("(159) a rule pushed onto the first line by a later edit is text too", false, i.classes(1).includes("pane-rule"), i.classes(1));
+  r.check("(159) a rule pushed onto the first line by a later edit is text too", false, i.classes(1).includes("plume-rule"), i.classes(1));
 
   // 160: the backtick that makes a fence completes the block — a closing fence and one empty code
   // line, the caret on it — so a new block is never an 8px strip holding the caret.
@@ -1590,17 +1590,17 @@ export function runConstructs(view, doc) {
 
   // --- headings ---------------------------------------------------------------------------------
 
-  line1("an H1", "# One", "# One", "pane-line-h1");
-  line1("an H2", "## Two", "## Two", "pane-line-h2");
-  line1("an H3", "### Three", "### Three", "pane-line-h3");
+  line1("an H1", "# One", "# One", "plume-line-h1");
+  line1("an H2", "## Two", "## Two", "plume-line-h2");
+  line1("an H3", "### Three", "### Three", "plume-line-h3");
   // Four, five and six are real CommonMark and the design draws three heading levels, so they
   // render at level three **on purpose** — a decision, not a gap. The bytes keep all six hashes,
-  // which is the half that matters: the file keeps its levels for whatever opens it next, and Pane
+  // which is the half that matters: the file keeps its levels for whatever opens it next, and Plume
   // simply has no fourth size to show them at.
   line1("an H4 keeps its hashes and renders at level three", "#### Four", "#### Four",
-    "pane-line-h3");
-  line1("an H5 does the same", "##### Five", "##### Five", "pane-line-h3");
-  line1("an H6 does the same", "###### Six", "###### Six", "pane-line-h3");
+    "plume-line-h3");
+  line1("an H5 does the same", "##### Five", "##### Five", "plume-line-h3");
+  line1("an H6 does the same", "###### Six", "###### Six", "plume-line-h3");
   // `#Title` with no space is not a heading in CommonMark, and must not draw as one.
   line1("a hash with no space is not a heading", "#Title", "#Title", "");
 
@@ -1610,13 +1610,13 @@ export function runConstructs(view, doc) {
   for (const [name, rule] of [["a dashed rule", "---"], ["a starred rule", "***"], ["an underscored rule", "___"]]) {
     d.reset(); d.type("a"); d.press("Enter"); d.type(rule);
     r.check(`${name} writes what was typed`, `a\n\n${rule}\n`, d.text(), rule);
-    r.check(`${name} renders as pane-rule`, true, i.classes(3).includes("pane-rule"), i.classes(3));
+    r.check(`${name} renders as plume-rule`, true, i.classes(3).includes("plume-rule"), i.classes(3));
   }
 
   // --- quotes -----------------------------------------------------------------------------------
 
-  line1("a quote", "> quoted", "> quoted", "pane-line-quote", 2);
-  line1("a nested quote", ">> deeper", ">> deeper", "pane-line-quote", 3);
+  line1("a quote", "> quoted", "> quoted", "plume-line-quote", 2);
+  line1("a nested quote", ">> deeper", ">> deeper", "plume-line-quote", 3);
 
   // --- inline -----------------------------------------------------------------------------------
 
@@ -1640,19 +1640,19 @@ export function runConstructs(view, doc) {
     r.check(`${name} goes raw with the caret inside it`, false, drawn());
   };
 
-  inline("bold", "**bold**", "pane-strong");
-  inline("italic", "*italic*", "pane-em");
-  inline("bold-italic", "***both***", "pane-strong");
-  inline("strikethrough", "~~gone~~", "pane-strike");
-  inline("inline code", "`code`", "pane-code");
-  inline("underline", "<u>under</u>", "pane-underline");
-  inline("highlight", "==marked==", "pane-mark");
-  inline("a link", "[text](http://x.com)", "pane-link");
+  inline("bold", "**bold**", "plume-strong");
+  inline("italic", "*italic*", "plume-em");
+  inline("bold-italic", "***both***", "plume-strong");
+  inline("strikethrough", "~~gone~~", "plume-strike");
+  inline("inline code", "`code`", "plume-code");
+  inline("underline", "<u>under</u>", "plume-underline");
+  inline("highlight", "==marked==", "plume-mark");
+  inline("a link", "[text](http://x.com)", "plume-link");
 
   // --- links you can still read (decision 121, issue #1) -----------------------------------------
   //
   // `inline` above asks whether the class landed, and it cannot see a construct rendered as
-  // *nothing*: an empty `.pane-link` span satisfies it exactly as a full one does. The report was
+  // *nothing*: an empty `.plume-link` span satisfies it exactly as a full one does. The report was
   // that a pasted URL's line goes blank the moment the caret leaves it — the class was there the
   // whole time. So the question a link has to answer is what the **line says**, which is the one
   // thing a reader of the note cares about.
@@ -1661,7 +1661,7 @@ export function runConstructs(view, doc) {
   // GFM's bare autolink is a `URL` with no `Link` around it at all; CommonMark's angle form is a
   // `Link` whose entire content is the URL; and the labelled form is a `Link` whose content is a
   // label the URL is not part of. Only the third may hide its URL.
-  const linkReads = (name, typed, wantVisible, wantHidden, wantClass = "pane-link") => {
+  const linkReads = (name, typed, wantVisible, wantHidden, wantClass = "plume-link") => {
     const whole = `before ${typed} after`;
     d.reset();
     d.type(whole);
@@ -1692,7 +1692,7 @@ export function runConstructs(view, doc) {
   linkReads("a bare URL with a query", "https://x.com/a?b=1&c=2", "https://x.com/a?b=1&c=2");
 
   // Images are out of scope, so an image renders as its own source rather than as a rendering of
-  // something Pane has decided not to render. Both halves matter: `![alt](…)` used to draw the
+  // something Plume has decided not to render. Both halves matter: `![alt](…)` used to draw the
   // bare word `alt` with its target invisible, and `![](…)` — no alt text — used to draw nothing
   // at all, which is this decision's own fault in the one construct nobody reported.
   // No class assertion: an `Image` is not in `INLINE_STYLE` and its source is plain text.
@@ -1701,8 +1701,8 @@ export function runConstructs(view, doc) {
     null, null);
 
   // Underscore emphasis is the other half of CommonMark and a file can arrive carrying it.
-  inline("underscore italic", "_italic_", "pane-em");
-  inline("underscore bold", "__bold__", "pane-strong");
+  inline("underscore italic", "_italic_", "plume-em");
+  inline("underscore bold", "__bold__", "plume-strong");
 
   // --- code blocks ------------------------------------------------------------------------------
 
@@ -1710,7 +1710,7 @@ export function runConstructs(view, doc) {
   // press Enter on the opening one, and the reason is not convenience: an unclosed fence swallows
   // the entire rest of the note, so everything typed afterwards is code — in the file as well as on
   // screen.
-  // Since 160 the third backtick closes it, before ⏎: no language is typed, and Pane shows none.
+  // Since 160 the third backtick closes it, before ⏎: no language is typed, and Plume shows none.
   d.reset();
   d.type("```");
   d.type("x = 1");
@@ -1748,7 +1748,7 @@ export function runConstructs(view, doc) {
   r.check("an escaped asterisk stays escaped", "\\*not bold\\*\n\nelsewhere",
     view.state.doc.toString(), "\\*not bold\\*");
   d.at("elsewhere");
-  r.check("and does not render as emphasis", false, !!i.lineEl(1).querySelector(".pane-em"));
+  r.check("and does not render as emphasis", false, !!i.lineEl(1).querySelector(".plume-em"));
 
   // The backslash itself is chrome (decision 135). It has to be, because an escape is the only way
   // markdown can write a literal `1. ` at the start of an item — and the caret rule rather than the
@@ -1899,24 +1899,24 @@ export function runSelectionReveal(view, doc) {
 
   d.load(NOTE);
   selectAll();
-  // The hashes' own space stays, exactly as it does with the pane blurred: `HeadingMark` hides the
+  // The hashes' own space stays, exactly as it does with the panel blurred: `HeadingMark` hides the
   // marker and not the space after it, which is the rendering this has always had.
   // The task's `[ ]` is a widget, so it contributes no text; the hashes' own space stays, exactly
-  // as it does with the pane blurred — `HeadingMark` hides the marker and not the space after it.
+  // as it does with the panel blurred — `HeadingMark` hides the marker and not the space after it.
   r.check("⌘A leaves the note rendered",
     "Heading one⏎⏎Some bold and code and em here.⏎⏎quoted line⏎⏎1. numbered todo⏎* two bullets⏎",
     lines());
 
-  r.check("⌘A reveals no raw list marker", 0, doc.querySelectorAll(".pane-syntax-listmark").length);
-  r.check("⌘A reveals no raw task marker", 0, doc.querySelectorAll(".pane-syntax-taskmark").length);
+  r.check("⌘A reveals no raw list marker", 0, doc.querySelectorAll(".plume-syntax-listmark").length);
+  r.check("⌘A reveals no raw task marker", 0, doc.querySelectorAll(".plume-syntax-taskmark").length);
   // The other half of the same claim: the markers are still *there*, drawn. A rule that hid them
   // outright would satisfy the two above and be a different bug.
   r.check("⌘A still draws the numbered item's number", "1.", i.marker(7));
   // A to-do is a bullet's since 158, so it gets a note of its own.
   d.load("- [ ] a todo\n\npara\n");
   selectAll();
-  r.check("⌘A still draws a to-do's checkbox", true, !!i.lineEl(1).querySelector(".pane-task"));
-  r.check("…and reveals no raw task marker", 0, doc.querySelectorAll(".pane-syntax-taskmark").length);
+  r.check("⌘A still draws a to-do's checkbox", true, !!i.lineEl(1).querySelector(".plume-task"));
+  r.check("…and reveals no raw task marker", 0, doc.querySelectorAll(".plume-syntax-taskmark").length);
   d.load(NOTE);
   selectAll();
   r.check("⌘A still draws the bullet", "•", i.marker(8));
@@ -1936,7 +1936,7 @@ export function runSelectionReveal(view, doc) {
   select(at("numbered"), at("numbered") + 8);
   r.check("a selection inside one line does not reveal its marker either", "1.", i.marker(7));
   r.check("nor its task marker", false,
-    !!i.lineEl(7).querySelector(".pane-syntax-taskmark"));
+    !!i.lineEl(7).querySelector(".plume-syntax-taskmark"));
 
   // **An inline construct is the exception, and it is measured rather than argued.** Revealing
   // `**bold**` is wider than not revealing it, so a caret-only rule would move the text sideways the
@@ -2001,17 +2001,17 @@ export function runSelectionReveal(view, doc) {
   r.check("⌘A carries data-ranged", true, view.dom.hasAttribute("data-ranged"));
   // The source writes this as `every range is non-empty` rather than `the main range is`, so that a
   // mixed multi-range would keep the carets belonging to its empty ranges — which is what AppKit
-  // does. **That branch is unreachable in Pane and this is the proof**: `allowMultipleSelections` is
+  // does. **That branch is unreachable in Plume and this is the proof**: `allowMultipleSelections` is
   // never enabled, so a second range does not survive being dispatched. Asserted rather than left
   // implied, because `every` reads like a tested distinction and is not one.
   view.dispatch({ selection: ES.create([ES.range(0, 5), ES.cursor(20)]) });
-  r.check("a second range does not survive — Pane has no multi-cursor", 1,
+  r.check("a second range does not survive — Plume has no multi-cursor", 1,
     view.state.selection.ranges.length);
   d.at("numbered");
 
   // --- no caret while text is selected, computed (139, amended 163) --------------------------------
   //
-  // The declaration below was pinned and never once applied while the pane had focus: CodeMirror's
+  // The declaration below was pinned and never once applied while the panel had focus: CodeMirror's
   // `.cm-focused > .cm-scroller > .cm-cursorLayer .cm-cursor { display: block }` outranks it, so ⌘A
   // left an amber bar at the selection's end — reported where that end was a closing fence. Read
   // off the computed style of a focused editor, which is the only state it matters in.
@@ -2051,7 +2051,7 @@ export function runSelectionReveal(view, doc) {
                                    ".cm-editor:not(.cm-focused) .cm-line::selection, " +
                                    ".cm-editor:not(.cm-focused) .cm-content ::selection"
   );
-  r.check("an unfocused pane paints no selection", "transparent",
+  r.check("an unfocused panel paints no selection", "transparent",
     blurRule ? blurRule.style.getPropertyValue("background-color") : "no rule");
 
   // Third declaration, same reason. A blank line's `line-height: 8px` sets the line box and not the
@@ -2059,33 +2059,33 @@ export function runSelectionReveal(view, doc) {
   // WebKit started the *next* line's selection below that overflow and painted it 14pt against the
   // 18pt of a line with no blank above it. Measured off the shipped build's pixels; `getClientRects`
   // reports 18 for every one of them, so nothing in this harness can see the difference.
-  const blankRule = rules.find((rule) => rule.selectorText === ".cm-line.pane-line-blank");
+  const blankRule = rules.find((rule) => rule.selectorText === ".cm-line.plume-line-blank");
   r.check("a blank line clips, so it does not shorten the line below it", "hidden",
     blankRule ? blankRule.style.getPropertyValue("overflow") : "no rule");
   // Same fault, same fix, one construct over: a collapsed fence overflows its 8px box too.
-  const fenceRule = rules.find((rule) => rule.selectorText === ".cm-line.pane-line-fence");
+  const fenceRule = rules.find((rule) => rule.selectorText === ".cm-line.plume-line-fence");
   r.check("and so does a collapsed fence", "hidden",
     fenceRule ? fenceRule.style.getPropertyValue("overflow") : "no rule");
 
   // Decision 157: a line whose markers are all hidden has no text to select, so it paints none — a
   // fence line and a rule. The browser painted each as a full-width bar (a fence) or a 16pt band
   // wider than the 1px line (a rule), measured off the running build's pixels.
-  const hiddenLineRule = rules.find((rule) => (rule.selectorText ?? "").includes(".pane-line-fence::selection"));
+  const hiddenLineRule = rules.find((rule) => (rule.selectorText ?? "").includes(".plume-line-fence::selection"));
   r.check("(157) a fence line paints no selection", "transparent",
     hiddenLineRule ? hiddenLineRule.style.getPropertyValue("background-color") : "no rule");
   r.check("(157) …and a rule is the same rule", true,
-    !!hiddenLineRule && hiddenLineRule.selectorText.includes(".pane-rule::selection"),
+    !!hiddenLineRule && hiddenLineRule.selectorText.includes(".plume-rule::selection"),
     hiddenLineRule ? hiddenLineRule.selectorText : "no rule");
 
   // Decision 101's own rule, one box short. The number's gap box holds the space after `1.` and is
   // an `inline-block` a `line-height` tall, so a selected numbered item painted that rectangle where
   // a bullet — whose space is hidden — painted nothing: reported as the highlight on a numbered list
   // being longer than the one under it (101's amendment). Out of reach here for the usual reason.
-  const gapRule = rules.find((rule) => rule.selectorText?.includes(".pane-list-gap::selection"));
+  const gapRule = rules.find((rule) => rule.selectorText?.includes(".plume-list-gap::selection"));
   r.check("a number's gap box takes no selection highlight either (101)", "transparent",
     gapRule ? gapRule.style.getPropertyValue("background-color") : "no rule");
   r.check("…and it is the same rule the rendered number takes", true,
-    !!gapRule && gapRule.selectorText.includes(".pane-list-number::selection"),
+    !!gapRule && gapRule.selectorText.includes(".plume-list-number::selection"),
     gapRule ? gapRule.selectorText : "no rule");
 
   // Fourth declaration. WebKit paints a selection over the union of the inline boxes on the line, so
@@ -2119,7 +2119,7 @@ export function runSelectionReveal(view, doc) {
  *   fixed box the rendered marker occupied (`rawListMark`, decision 122), so the item's words do
  *   not move at all. Asserted as *identical*.
  * - **Inline constructs** reveal their markers as text, so what follows them moves right — by no
- *   more than the width the revealed markers paint, derived from the `.pane-syntax` spans rather
+ *   more than the width the revealed markers paint, derived from the `.plume-syntax` spans rather
  *   than written down (decision 82) — and what precedes them does not move. A heading's `#` and a quote's `>` are the
  *   same shape and are covered by the height half only: their marks stand at the line start with a
  *   space the reveal also uncovers, so there is no word before them to hold still.
@@ -2136,7 +2136,7 @@ export function runNoJump(view, doc) {
   const away = () => d.at("PARA");
   const revealedMarkerWidth = (n, beforeX) => {
     let width = 0;
-    for (const el of i.lineEl(n).querySelectorAll(".pane-syntax")) {
+    for (const el of i.lineEl(n).querySelectorAll(".plume-syntax")) {
       const rect = el.getBoundingClientRect();
       if (rect.width > 0 && rect.left < beforeX) width += rect.width;
     }

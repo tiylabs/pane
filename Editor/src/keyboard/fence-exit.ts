@@ -6,7 +6,7 @@
  * got out. When the block started the note, nothing got above it at all; and between two adjacent
  * blocks, ↓ went straight into the next one's code. Typora opens a line in each of those places.
  *
- * So does Pane now, in 147's shape — a blank line each side and the caret on an open line between.
+ * So does Plume now, in 147's shape — a blank line each side and the caret on an open line between.
  * ↓ and → at the end of a block's last line open one below it when the note ends there or another
  * block follows; ↑ and ← at the start of its first line open one above it when the note starts
  * there or another block precedes. Anywhere else these keys are what they were.

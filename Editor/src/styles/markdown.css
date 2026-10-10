@@ -1,5 +1,5 @@
 /*
- * How rendered markdown looks inside a pane.
+ * How rendered markdown looks inside a panel.
  *
  * Design frames 1a (prose, ordered and nested unordered lists, rule), 1b (task checkboxes, fenced
  * code, active-line raw source), 1d (monospace body), 1f (dark).
@@ -16,17 +16,17 @@
 }
 
 .cm-editor.cm-focused {
-  outline: none; /* the pane has its own focus story; a focus ring inside it is noise */
+  outline: none; /* the panel has its own focus story; a focus ring inside it is noise */
 }
 
 /* The gutters and the trailing space belong to the scrolled document, not to the box around it.
- * On `.pane__scroll` the 40px bottom was dead space *below* the scroller, so the last line stopped
+ * On `.plume__scroll` the 40px bottom was dead space *below* the scroller, so the last line stopped
  * clear of the fade instead of running under it.
  *
  * Selector deliberately `.cm-editor .cm-content`, not bare `.cm-content`: CodeMirror injects its own
  * base theme into <head> at runtime, and at equal specificity the later rule wins. A bare selector
  * silently loses, which takes the left gutter to zero and — because list items carry a negative
- * text-indent for their hanging indent — drags every list marker off the left edge of the pane. */
+ * text-indent for their hanging indent — drags every list marker off the left edge of the panel. */
 .cm-editor .cm-content {
   padding: var(--content-padding);
   font-family: var(--font-ui);
@@ -61,8 +61,8 @@
  *
  * The exception is a line the stylesheet has deliberately collapsed. There the strut *does* overflow,
  * and an overflowing inline box shortens the selection of the line below it — the blank-line fault
- * below, which is where that was measured. All three collapsed kinds clip: `.pane-line-blank` and
- * `.cm-line.pane-line-fence` here, `.cm-line.pane-rule` already did. */
+ * below, which is where that was measured. All three collapsed kinds clip: `.plume-line-blank` and
+ * `.cm-line.plume-line-fence` here, `.cm-line.plume-rule` already did. */
 .cm-line::before {
   content: "";
   display: inline-block;
@@ -99,7 +99,7 @@
 /* No caret while text is selected — `data-ranged` in live-preview.ts, and the reasoning is there.
  * `.cm-dropCursor` is deliberately not here: it answers a drag, not the selection.
  *
- * The second selector is the one that works while the pane has focus, which is the only time a caret
+ * The second selector is the one that works while the panel has focus, which is the only time a caret
  * is drawn at all. CodeMirror's `&.cm-focused > .cm-scroller > .cm-cursorLayer .cm-cursor` sets
  * `display: block` at (0,5,0) against the first one's (0,3,0), so for as long as this rule existed
  * ⌘A left a caret at the selection's end (163; 71's trap, a fifth time). This one is (0,6,0). */
@@ -139,13 +139,13 @@
  * this exact defect has cost something in this file (see the caret, and decision 42's `font-size`).
  *
  * So both states are matched at the specificity they need, and win on order from there. The
- * unfocused one matters as much as the focused: a pane you have clicked away from keeps its
+ * unfocused one matters as much as the focused: a panel you have clicked away from keeps its
  * selection on screen.
  */
 /* The selection is the **native** one, and the caret is still CodeMirror's drawn one.
  *
  * `drawSelection()` gives us both a 2px caret we can colour (decision 53) and a selection drawn as
- * one rectangle per line — which runs the full width of the pane past the end of the text, puts a
+ * one rectangle per line — which runs the full width of the panel past the end of the text, puts a
  * block in the left margin, and covers the gaps between blocks. Side by side with the reference,
  * which highlights only the text runs, ours reads as a wash over the whole note.
  *
@@ -170,7 +170,7 @@
   background: color-mix(in oklab, var(--accent) 30%, transparent) !important;
 }
 
-/* A pane you have clicked away from keeps no selection on screen.
+/* A panel you have clicked away from keeps no selection on screen.
  *
  * The comment above says the unfocused state "matters as much as the focused" and then paints it at
  * full strength, which is the fault: ⌘A, click into another app, and the whole note stays washed
@@ -203,18 +203,18 @@
  * being taller than its neighbours. It is not content: the height is a rendering choice, so the
  * selection should not draw it either. The line is still in the buffer and still selected; only the
  * strip stops being painted. */
-.cm-editor .cm-line.pane-line-blank::selection,
-.cm-editor .cm-line.pane-line-blank ::selection {
+.cm-editor .cm-line.plume-line-blank::selection,
+.cm-editor .cm-line.plume-line-blank ::selection {
   background: transparent !important;
 }
 
 /* Nor does a line whose markers are all hidden: a fence line and a rule (157). Nothing on either is
  * text you typed, and the browser painted the fence as a full-width bar and the rule as a band 16pt
  * tall and narrower than its own 1px line. The characters are still selected, and still copied. */
-.cm-editor .cm-line.pane-line-fence::selection,
-.cm-editor .cm-line.pane-line-fence ::selection,
-.cm-editor .cm-line.pane-rule::selection,
-.cm-editor .cm-line.pane-rule ::selection {
+.cm-editor .cm-line.plume-line-fence::selection,
+.cm-editor .cm-line.plume-line-fence ::selection,
+.cm-editor .cm-line.plume-rule::selection,
+.cm-editor .cm-line.plume-rule ::selection {
   background-color: transparent !important;
 }
 
@@ -235,7 +235,7 @@
  * the rhythm" was right about *where* the spacing comes from and wrong about *how much*: a full
  * 22px line box plus a heading's margin put roughly twice the reference's air between every pair of
  * blocks, and the document read as a draft rather than as a note. The blank line now gets a shorter
- * box (see `.pane-line-blank`), which is the same trick as rendering `**bold**` bold — the newline
+ * box (see `.plume-line-blank`), which is the same trick as rendering `**bold**` bold — the newline
  * is untouched on disk and the caret still goes in it; only its height is a rendering choice.
  */
 
@@ -247,7 +247,7 @@
 /* An empty source line, at a fraction of a full line box. This is the single biggest lever on how
  * the document reads — see the revision note above. Tuned against the reference: enough that the
  * caret is a comfortable target and a paragraph break is unmistakable, far short of a whole line. */
-.cm-line.pane-line-blank {
+.cm-line.plume-line-blank {
   height: var(--blank-line-height);
   line-height: var(--blank-line-height);
   /* **And it has to clip, or it steals 4pt off the selection of the line below it.**
@@ -273,21 +273,21 @@
  *
  * Padding rather than margin for the reason spelled out on the headings above: CodeMirror measures
  * a line's height from its bounding rect, which margins are not part of, so a margin here would be
- * invisible to every height decision the pane makes (decisions 40 and 44). */
-.cm-line.pane-line-gap {
+ * invisible to every height decision the panel makes (decisions 40 and 44). */
+.cm-line.plume-line-gap {
   padding-top: var(--block-gap);
 }
 
 /* A fenced block's ``` lines, collapsed into the block's own padding.
  *
- * Pane ships no syntax highlighting and no language picker, so the `python` after the backticks is a
+ * Plume ships no syntax highlighting and no language picker, so the `python` after the backticks is a
  * word that changes nothing and only has to be read. Kept as a real line at a real height, so the
  * caret can still be put in it and the fence is still exactly three backticks on disk — decision 5's
  * bar is what lands in the file, not what is drawn over it.
  *
  * The backticks are hidden by DECORATIONS (CodeMark and CodeInfo are in live-preview.ts's
  * MARKER_NODES), not by anything here. This rule used to also carry `font-size: 0` and a comment
- * claiming that was the mechanism — it never applied. `.cm-line.pane-line-code` below sets
+ * claiming that was the mechanism — it never applied. `.cm-line.plume-line-code` below sets
  * `font-size` at the same specificity and is declared later, so it won every time; the computed size
  * on a fence line measured 13.5px, not 0. It was removed rather than made to win: with the marks
  * already gone the line is empty, and the only thing keeping it at 10px is the height pair below.
@@ -295,17 +295,17 @@
  * The class is applied only while the caret is elsewhere — see the note in live-preview.ts. On the
  * caret's line the fence is an ordinary code line, which is what stops it from being a 10px strip
  * that silently eats the keystroke you meant for the blank line next to it. */
-.cm-line.pane-line-fence {
+.cm-line.plume-line-fence {
   height: var(--blank-line-height);
   line-height: var(--blank-line-height);
-  /* Clipped for the reason `.pane-line-blank` is: a line collapsed below its own line box overflows,
+  /* Clipped for the reason `.plume-line-blank` is: a line collapsed below its own line box overflows,
    * and WebKit starts the next line's selection below that overflow. */
   overflow: hidden;
 }
 
-.cm-line.pane-line-h1,
-.cm-line.pane-line-h2,
-.cm-line.pane-line-h3 {
+.cm-line.plume-line-h1,
+.cm-line.plume-line-h2,
+.cm-line.plume-line-h3 {
   font-weight: 700;
   letter-spacing: -0.02em;
   /* The design's h1 inherits the content block's 1.55; tightened here because a two-line heading at
@@ -317,19 +317,19 @@
    *
    * The 4px bottom margin this used to carry was also a 4px lie per heading. CodeMirror measures a
    * line by its `getBoundingClientRect()`, which excludes margins: measured, a 10px top margin on
-   * every line grew the DOM by 410px and left `view.contentHeight` unchanged, so the pane reports a
+   * every line grew the DOM by 410px and left `view.contentHeight` unchanged, so the panel reports a
    * height short of the note it is drawing. Anything spatial on a `.cm-line` has to be padding. */
 }
 
 /* Twice the block gap above a heading, like the rule's (152), so a section reads as one — decision
  * 166, amending 55. A blank line typed above supplies one gap and this the other; with none typed,
- * `pane-line-gap` is on the same line and both come from here. Padding, for the reason above. */
-.cm-line.pane-line-heading-space { padding-top: var(--block-gap); }
-.cm-line.pane-line-heading-space.pane-line-gap { padding-top: calc(var(--block-gap) * 2); }
+ * `plume-line-gap` is on the same line and both come from here. Padding, for the reason above. */
+.cm-line.plume-line-heading-space { padding-top: var(--block-gap); }
+.cm-line.plume-line-heading-space.plume-line-gap { padding-top: calc(var(--block-gap) * 2); }
 
-.cm-line.pane-line-h1 { font-size: var(--size-h1); }
-.cm-line.pane-line-h2 { font-size: calc(var(--size-h1) * 0.78); }
-.cm-line.pane-line-h3 { font-size: calc(var(--size-h1) * 0.66); }
+.cm-line.plume-line-h1 { font-size: var(--size-h1); }
+.cm-line.plume-line-h2 { font-size: calc(var(--size-h1) * 0.78); }
+.cm-line.plume-line-h3 { font-size: calc(var(--size-h1) * 0.66); }
 
 /* Indentation comes from the nesting depth, not from the literal spaces in the buffer — rendering
  * those in a proportional font gives about 4px a level where the design draws 22-26px.
@@ -339,7 +339,7 @@
  *
  * The *step* between levels was always right — 22px, and the reference measures 22 too. What was
  * wrong was where the first level starts: our level-1 marker sat 18px right of the paragraph margin
- * against the reference's 6.5, so the whole list was pushed across the pane and every level after it
+ * against the reference's 6.5, so the whole list was pushed across the panel and every level after it
  * inherited the offset. Measured on the same note at the same width, marker/text: ours 46/60,
  * 68/82, 90/104; the reference's 31/47, 54/68, 76/91. Twelve points came off each level. */
 /* The hanging indent lives on the *marker*, not on the line.
@@ -359,7 +359,7 @@
  * `--list-lead` is how far a first-level marker sits right of the text column's own left edge. It
  * was 10 and the reference measures 6.5 — its marker at 31 against paragraph text at 24.5, on the
  * same note at the same size. The absolute figures are not comparable between the two (the column
- * is centred with `margin: 0 auto`, so its offset moves with the pane's width), but that 6.5 is,
+ * is centred with `margin: 0 auto`, so its offset moves with the panel's width), but that 6.5 is,
  * and the typography pass's twelve-point correction stopped 3.5 short of it.
  *
  * `--list-step` is the 22 between levels, which the reference measures too and which was always
@@ -381,20 +381,20 @@
    * column, so the only gap any marker had was whatever its own glyph left inside the box — 9.2px
    * for a bullet and 1.4px for a number, measured. The reference's is 7.5px for all of them. */
   --list-marker-gap: 7.5px;
-  /* 14px, the reference's figure, measured off a screenshot of both panes side by side rather
+  /* 14px, the reference's figure, measured off a screenshot of both panels side by side rather
    * than tuned: 15 then 13 then 11 were all guesses, and the report after each was that the box
    * looked wrong. Centred in the 16px marker box it spans the box almost exactly, which is what
    * makes a checkbox read as the same kind of object as a bullet rather than as a smaller one.
    *
-   * **A token rather than a local.** It lived on `.pane-task`, which is fine until something that
+   * **A token rather than a local.** It lived on `.plume-task`, which is fine until something that
    * is not a checkbox has to line up with one — the revealed `[ ]` of a numbered to-do owes its
    * advance to this number, and a `var()` that resolves on the wrong element silently drops the
    * whole declaration. */
   --checkbox-size: 14px;
 }
 
-.pane-list-marker,
-.pane-list-number {
+.plume-list-marker,
+.plume-list-number {
   display: inline-block;
   /* `min-width`, never `width` — a fixed width once turned `- ` + `a` into `-a` (decision 122).
    * These boxes hold a number that is real document text, so they take the same treatment even
@@ -413,8 +413,8 @@
 }
 
 /* A bullet's space is hidden, so its gap is a margin. A number's space is real text in the gap box
- * (`.pane-list-gap` below), the same shape as the raw marker under the caret — decision 145. */
-.pane-list-marker {
+ * (`.plume-list-gap` below), the same shape as the raw marker under the caret — decision 145. */
+.plume-list-marker {
   margin-right: var(--list-marker-gap);
 }
 
@@ -445,9 +445,9 @@
  * is not the thing you are selecting. Nothing is lost — copy reads the document rather than the DOM
  * selection, so ⇧⌘C still carries the markers, and the **raw** marker under the caret is real text
  * with no rule here, so it highlights like any other character. */
-.pane-list-marker,
-.pane-list-number,
-.pane-task {
+.plume-list-marker,
+.plume-list-number,
+.plume-task {
   -webkit-user-select: none;
   user-select: none;
 }
@@ -455,7 +455,7 @@
 /* **And `user-select` only works for two of those three.** The bullet and the checkbox are widgets —
  * `contenteditable="false"`, empty text, a `cm-widgetBuffer` either side — so the property does what
  * it says. A rendered number is not a widget: it is a mark over the document's own `1. `, kept as
- * real text on purpose (see `.pane-list-number` above, and decision 122 for what a box
+ * real text on purpose (see `.plume-list-number` above, and decision 122 for what a box
  * without it did to typing), and WebKit ignores `user-select: none` for live text inside a
  * contenteditable. So the rule above read as covering all three and covered two, from the day it
  * landed: measured on the shipped build, a selected number painted a 20pt box against the text's
@@ -464,12 +464,12 @@
  * Nothing else will do it. The box has to stay `inline-block` to hold the marker column, so its
  * rectangle is a `line-height` tall whenever it paints; the only lever left is not painting.
  * Same shape as the blank-line rule above, and the same specificity, for the same reason. */
-.cm-editor .cm-line .pane-list-number::selection,
+.cm-editor .cm-line .plume-list-number::selection,
 /* And the gap box after it, for exactly the same reason: it holds the number's own space, it is an
  * `inline-block` a `line-height` tall, and it painted a 20px rectangle 7.5px wide against the 18px
  * of the text beside it — which is what made a selected numbered item read as longer than the
  * bulleted one under it, where the same space is hidden (101, amended; 145). */
-.cm-editor .cm-line .pane-list-gap::selection {
+.cm-editor .cm-line .plume-list-gap::selection {
   background-color: transparent !important;
 }
 
@@ -482,12 +482,12 @@
  * so three spaces after a marker still paint rather than overflow into the text. */
 /* A waiting pair's markers (148): drawn beside the caret, in the buffer nowhere. Not selectable,
  * because selecting text that does not exist is a second answer to what the note holds. */
-.pane-pending-mark {
+.plume-pending-mark {
   user-select: none;
   -webkit-user-select: none;
 }
 
-.pane-list-gap {
+.plume-list-gap {
   display: inline-block;
   min-width: var(--list-marker-gap);
   text-align: right;
@@ -503,33 +503,33 @@
  * a quoted list looking wrong rather than as a collision.
  *
  * So these four are qualified with `.cm-editor` to outrank anything setting the property at
- * `.cm-line.pane-*` — the list indent is the more specific statement, and a line carrying both
+ * `.cm-line.plume-*` — the list indent is the more specific statement, and a line carrying both
  * classes needs both numbers. The inset comes in as a token so the two never race. */
-.cm-editor .cm-line.pane-line-li-1 {
+.cm-editor .cm-line.plume-line-li-1 {
   padding-left: calc(
     var(--line-inset, 0px) + var(--list-lead) + var(--list-marker-box) + var(--list-marker-gap)
   );
 }
-.cm-editor .cm-line.pane-line-li-2 {
+.cm-editor .cm-line.plume-line-li-2 {
   padding-left: calc(
     var(--line-inset, 0px) + var(--list-lead) + var(--list-marker-box) + var(--list-marker-gap)
       + var(--list-step)
   );
 }
-.cm-editor .cm-line.pane-line-li-3 {
+.cm-editor .cm-line.plume-line-li-3 {
   padding-left: calc(
     var(--line-inset, 0px) + var(--list-lead) + var(--list-marker-box) + var(--list-marker-gap)
       + 2 * var(--list-step)
   );
 }
-.cm-editor .cm-line.pane-line-li-4 {
+.cm-editor .cm-line.plume-line-li-4 {
   padding-left: calc(
     var(--line-inset, 0px) + var(--list-lead) + var(--list-marker-box) + var(--list-marker-gap)
       + 3 * var(--list-step)
   );
 }
 
-.cm-line.pane-line-code {
+.cm-line.plume-line-code {
   font-family: var(--font-mono);
   font-size: var(--size-code);
   color: var(--text-secondary);
@@ -538,7 +538,7 @@
   padding-right: 12px;
 }
 
-.cm-line.pane-line-quote {
+.cm-line.plume-line-quote {
   border-left: 2px solid var(--rule);
   /* The token as well as the property: a quoted *list* line takes its padding from the rule above,
      which adds this to the marker column rather than replacing one with the other. */
@@ -549,29 +549,29 @@
 
 /* ---- Inline ------------------------------------------------------------------------------------ */
 
-.pane-strong { font-weight: 700; color: var(--text-strong); }
-.pane-em { font-style: italic; }
+.plume-strong { font-weight: 700; color: var(--text-strong); }
+.plume-em { font-style: italic; }
 
 /* `==highlight==` and `<u>underline</u>` — decision 61. The highlight is the accent at a wash
- * rather than a yellow: this is the one colour the pane already owns, and a felt-tip yellow over a
+ * rather than a yellow: this is the one colour the panel already owns, and a felt-tip yellow over a
  * neutral note is somebody else's design. */
-.pane-mark {
+.plume-mark {
   background: color-mix(in oklab, var(--accent) 26%, transparent);
   border-radius: 2px;
   padding: 1px 0;
 }
 
-.pane-underline {
+.plume-underline {
   text-decoration: underline;
   text-underline-offset: 2px;
 }
 
-.pane-strike {
+.plume-strike {
   text-decoration: line-through;
   color: var(--text-quaternary);
 }
 
-.pane-code {
+.plume-code {
   font-family: var(--font-mono);
   font-size: var(--size-code);
   color: var(--text-secondary);
@@ -580,25 +580,25 @@
   padding: 0 3px;
 }
 
-.pane-link {
+.plume-link {
   color: var(--accent);
   text-decoration: none;
 }
 
-.pane-link:hover {
+.plume-link:hover {
   text-decoration: underline;
 }
 
 /* A link's words are all the link, however they are styled inside it — decision 167. Bold and code
  * set colours of their own, and nested in a link they painted half the label as not a link. */
-.pane-link .pane-strong,
-.pane-link .pane-code {
+.plume-link .plume-strong,
+.plume-link .plume-code {
   color: inherit;
 }
 
 /* ---- Blocks ------------------------------------------------------------------------------------ */
 
-.cm-line.pane-rule {
+.cm-line.plume-rule {
   /* Drawn on the line box rather than as an <hr>, because the line still holds the literal "---"
    * the user typed and must stay selectable and editable.
    *
@@ -612,7 +612,7 @@
    * than a border — a border-bottom paints under the padding, so the line would sit at the very
    * bottom of the space instead of in the middle of it.
    *
-   * This must stay AFTER `.pane-line-gap`, which is the same specificity and sets `padding-top`:
+   * This must stay AFTER `.plume-line-gap`, which is the same specificity and sets `padding-top`:
    * a rule that starts a block with no blank line above it takes this padding, not that one, or
    * the two stack and the line is no longer centred (71's trap). */
   background: linear-gradient(var(--rule), var(--rule)) no-repeat center / 100% 1px;
@@ -637,8 +637,8 @@
  * body text, and the format bar's active button still uses a pressed fill rather than the accent.
  */
 
-.pane-list-marker,
-.pane-list-number {
+.plume-list-marker,
+.plume-list-number {
   color: var(--accent);
 }
 
@@ -648,7 +648,7 @@
  * at every other one. Centred in the line the same way the checkbox is: `vertical-align: top` and
  * a translate of half the difference between the line box and the shape, computed rather than
  * tuned, because text size is a setting from 10 to 32 (decision 82). */
-.pane-list-marker {
+.plume-list-marker {
   --bullet-size: calc(var(--text-size) / 3);
   /* Centred by the box rather than by arithmetic.
    *
@@ -665,7 +665,7 @@
   vertical-align: top;
 }
 
-.pane-list-marker i {
+.plume-list-marker i {
   width: var(--bullet-size);
   height: var(--bullet-size);
   flex: none;
@@ -673,17 +673,17 @@
 
 /* Level one is a filled dot, level two a ring, level three a square: the same three shapes the
  * glyphs stood for, now at one size instead of three. */
-.pane-bullet-1 i {
+.plume-bullet-1 i {
   border-radius: 50%;
   background: currentColor;
 }
 
-.pane-bullet-2 i {
+.plume-bullet-2 i {
   border-radius: 50%;
   border: 1.5px solid currentColor;
 }
 
-.pane-bullet-3 i {
+.plume-bullet-3 i {
   background: currentColor;
 }
 
@@ -698,12 +698,12 @@
 
 /* The blockquote bar too — same argument, and it is the only thing distinguishing a quote from
  * indented text at a glance. */
-.cm-line.pane-line-quote {
+.cm-line.plume-line-quote {
   border-left-color: color-mix(in oklab, var(--accent) 55%, transparent);
 }
 
 /* The bullet glyphs themselves are set by `BulletWidget` in live-preview.ts, not here. Two
- * `.pane-bullet-N::before` rules used to sit at this spot naming the characters; nothing has ever
+ * `.plume-bullet-N::before` rules used to sit at this spot naming the characters; nothing has ever
  * carried those classes, so they were a second, silent statement of the same thing — and they said
  * two levels where the widget now draws three. */
 
@@ -715,7 +715,7 @@
  * it edits those characters; it does not toggle a hidden model.
  */
 
-.pane-task {
+.plume-task {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -767,8 +767,8 @@
  *
  * A bullet's to-do keeps the slot and is untouched: there the box *is* the item's marker, which
  * is why the bullet is hidden for it and a number is not. Two classes deep for decision 71's
- * reason — `.pane-task` above is one class, and a tie here would be settled by source order. */
-.pane-task.pane-task--inflow {
+ * reason — `.plume-task` above is one class, and a tie here would be settled by source order. */
+.plume-task.plume-task--inflow {
   margin-left: 0;
   margin-right: var(--list-marker-gap);
 }
@@ -779,13 +779,13 @@
  * Both numbers derive from the box rather than being picked: the inner square is inset by the same
  * hairline the border is drawn at plus one, and its corner radius keeps the outer one's proportion,
  * so the whole thing scales with `--checkbox-size` and there is nothing to re-tune. */
-.pane-task--done {
+.plume-task--done {
   border: 1.5px solid var(--accent);
   background: transparent;
   position: relative;
 }
 
-.pane-task--done::after {
+.plume-task--done::after {
   content: "";
   position: absolute;
   inset: 2.5px;
@@ -793,12 +793,12 @@
   background: var(--accent);
 }
 
-.pane-task--todo {
+.plume-task--todo {
   border: 1.5px solid var(--checkbox-border);
   background: transparent;
 }
 
-.pane-task-done-text {
+.plume-task-done-text {
   color: var(--text-quaternary);
   text-decoration: line-through;
 }
@@ -813,12 +813,12 @@
  * warns about.
  */
 
-.pane-raw .pane-code,
-.pane-raw .pane-codeblock {
+.plume-raw .plume-code,
+.plume-raw .plume-codeblock {
   background: transparent;
   padding: 0;
 }
 
-.pane-syntax {
+.plume-syntax {
   color: var(--text-faint);
 }

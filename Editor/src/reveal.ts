@@ -31,7 +31,7 @@ export interface Reveal {
  * thing, the blank line the caret stands on; it used to decide which markers a line showed too, and
  * the markers no longer have a raw form to show.
  *
- * **Nothing is revealed while the editor is not focused** (53). A pane you have clicked away from
+ * **Nothing is revealed while the editor is not focused** (53). A panel you have clicked away from
  * is not where you are working, and a note left showing `**A research plan**` on one line reads as
  * a rendering bug rather than as a caret. Nothing is lost on the way back: focus returns, the line
  * goes raw again, and the caret is still where it was (11).

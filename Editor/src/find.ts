@@ -6,12 +6,12 @@
  * right here for the reason decision 5 gives. That decision says to prefer an existing MIT package
  * over hand-rolling *live-preview decorations*, because reconciling source with rendered output is
  * the hard part and the place these editors break. Finding a substring is not that. What the package
- * would actually bring is its own panel DOM, a replace UI and a regexp mode — three things this pane
+ * would actually bring is its own panel DOM, a replace UI and a regexp mode — three things this panel
  * has nowhere to put — in exchange for a literal-string search that is forty lines.
  *
  * The bar replaces the footer, exactly as the format bar does (decision 22): one row, never two. It
  * is the third state of that row rather than new chrome, which is what keeps frame 1e's rule — every
- * control inside its own pane — affordable.
+ * control inside its own panel — affordable.
  */
 
 import { describe } from "./tooltip";
@@ -97,14 +97,14 @@ function matchesOf(text: string, query: string): Match[] {
 
 interface FindOptions {
   root: HTMLElement;
-  pane: HTMLElement;
+  plume: HTMLElement;
   view: EditorView;
   /** The bar and the footer are different heights, so the window has to follow. */
   onLayoutChange: () => void;
 }
 
 export function mountFind(options: FindOptions) {
-  const { root, pane, view } = options;
+  const { root, plume, view } = options;
 
   root.innerHTML = `
     <div class="find__row">
@@ -144,8 +144,8 @@ export function mountFind(options: FindOptions) {
       </button>
     </div>`;
 
-  // The pane's own bubble, not the system's. This bar *is* the footer row that the format bar
-  // occupies (decision 38), so having the two answer differently — one instantly in the pane's
+  // The panel's own bubble, not the system's. This bar *is* the footer row that the format bar
+  // occupies (decision 38), so having the two answer differently — one instantly in the panel's
   // material, one a second later in the system's yellow — was the inconsistency decision 58 set
   // out to remove, sitting in the one place it is most obvious.
   const input = root.querySelector<HTMLInputElement>(".find__input")!;
@@ -171,7 +171,7 @@ export function mountFind(options: FindOptions) {
   const count = root.querySelector<HTMLElement>(".find__count")!;
 
   function isOpen(): boolean {
-    return pane.hasAttribute("data-find");
+    return plume.hasAttribute("data-find");
   }
 
   function state(): FindState | null {
@@ -193,7 +193,7 @@ export function mountFind(options: FindOptions) {
   // ---- Replace ------------------------------------------------------------------------------
   //
   // Decision 38 hand-rolled find and ruled replace out in the same breath, on the grounds that
-  // `@codemirror/search` "would bring a panel, a replace UI and regexp — three things this pane has
+  // `@codemirror/search` "would bring a panel, a replace UI and regexp — three things this panel has
   // nowhere to put". The first and third still hold. The second turned out to be wrong: there is
   // somewhere to put it, and it is where the reference puts it — a disclosure on the search row
   // that opens one more row underneath. See decision 72.
@@ -205,7 +205,7 @@ export function mountFind(options: FindOptions) {
   function showReplace(open: boolean): void {
     root.toggleAttribute("data-replace", open);
     disclosure.setAttribute("aria-expanded", String(open));
-    // The bar is now two rows tall or one, and the pane follows it (decision 66 measures whichever
+    // The bar is now two rows tall or one, and the panel follows it (decision 66 measures whichever
     // row is laid out, so this needs no special case beyond saying the layout moved).
     options.onLayoutChange();
   }
@@ -295,9 +295,9 @@ export function mountFind(options: FindOptions) {
       input.focus();
       return;
     }
-    pane.setAttribute("data-find", "");
+    plume.setAttribute("data-find", "");
     // The format bar and this one are both the footer row; two of them would stack.
-    pane.removeAttribute("data-format-bar");
+    plume.removeAttribute("data-format-bar");
     options.onLayoutChange();
 
     // Whatever is selected is almost always what you were about to type.
@@ -314,7 +314,7 @@ export function mountFind(options: FindOptions) {
 
   function close(): void {
     if (!isOpen()) return;
-    pane.removeAttribute("data-find");
+    plume.removeAttribute("data-find");
     // The disclosure closes with the bar. Reopening find to a replace row you opened an hour ago
     // is a taller bar than you asked for.
     root.removeAttribute("data-replace");

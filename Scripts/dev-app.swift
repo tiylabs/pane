@@ -3,12 +3,12 @@ import AppKit
 import Foundation
 
 // A shared process name is not an identity. Restrict rebuilds to this checkout's dev bundle,
-// with a legacy scratch exception so the first rebuild can retire the old build/Pane.app safely.
+// with a legacy scratch exception so the first rebuild can retire the old build/Plume.app safely.
 func isDevelopmentInstance(
     path: String, identifier: String?, scratchFlag: Bool, developmentPath: String, legacyPath: String
 ) -> Bool {
-    if path == developmentPath { return identifier == "com.tiylabs.pane.dev" }
-    return path == legacyPath && identifier == "com.tiylabs.pane" && scratchFlag
+    if path == developmentPath { return identifier == "com.tiylabs.plume.dev" }
+    return path == legacyPath && identifier == "com.tiylabs.plume" && scratchFlag
 }
 
 func canonicalPath(_ url: URL) -> String {
@@ -22,15 +22,15 @@ func fail(_ message: String) -> Never {
 
 let arguments = CommandLine.arguments
 if arguments.count == 2, arguments[1] == "--test" {
-    let development = "/checkout/build/Pane Dev.app"
-    let legacy = "/checkout/build/Pane.app"
+    let development = "/checkout/build/Plume Dev.app"
+    let legacy = "/checkout/build/Plume.app"
     let cases: [(String, String?, Bool, Bool)] = [
-        (development, "com.tiylabs.pane.dev", true, true),
-        (development, "com.tiylabs.pane", false, false),
-        ("/Applications/Pane.app", "com.tiylabs.pane", false, false),
-        ("/other/build/Pane Dev.app", "com.tiylabs.pane.dev", true, false),
-        (legacy, "com.tiylabs.pane", true, true),
-        (legacy, "com.tiylabs.pane", false, false),
+        (development, "com.tiylabs.plume.dev", true, true),
+        (development, "com.tiylabs.plume", false, false),
+        ("/Applications/Plume.app", "com.tiylabs.plume", false, false),
+        ("/other/build/Plume Dev.app", "com.tiylabs.plume.dev", true, false),
+        (legacy, "com.tiylabs.plume", true, true),
+        (legacy, "com.tiylabs.plume", false, false),
         (legacy, nil, true, false),
     ]
     for (path, identifier, scratch, expected) in cases {
@@ -44,13 +44,13 @@ if arguments.count == 2, arguments[1] == "--test" {
 }
 
 guard arguments.count == 4, ["stop", "inspect"].contains(arguments[1]) else {
-    fail("usage: swift Scripts/dev-app.swift stop|inspect <Pane Dev.app> <legacy Pane.app>")
+    fail("usage: swift Scripts/dev-app.swift stop|inspect <Plume Dev.app> <legacy Plume.app>")
 }
 let developmentPath = canonicalPath(URL(fileURLWithPath: arguments[2]))
 let legacyPath = canonicalPath(URL(fileURLWithPath: arguments[3]))
 let applications = NSWorkspace.shared.runningApplications.filter { application in
     guard let url = application.bundleURL else { return false }
-    let scratch = Bundle(url: url)?.object(forInfoDictionaryKey: "PaneScratchBuild") as? Bool ?? false
+    let scratch = Bundle(url: url)?.object(forInfoDictionaryKey: "PlumeScratchBuild") as? Bool ?? false
     return isDevelopmentInstance(
         path: canonicalPath(url), identifier: application.bundleIdentifier, scratchFlag: scratch,
         developmentPath: developmentPath, legacyPath: legacyPath

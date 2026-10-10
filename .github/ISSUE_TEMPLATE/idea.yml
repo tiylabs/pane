@@ -1,5 +1,5 @@
 name: Idea
-description: Suggest something Pane should do
+description: Suggest something Plume should do
 labels: ["idea"]
 body:
   - type: markdown
@@ -12,7 +12,7 @@ body:
   - type: textarea
     id: idea
     attributes:
-      label: What you'd like Pane to do
+      label: What you'd like Plume to do
     validations:
       required: true
 
@@ -31,7 +31,7 @@ body:
     attributes:
       label: The scope test
       description: >
-        Pane is a panel you summon over your work, write in, and dismiss. Every feature that makes
+        Plume is a panel you summon over your work, write in, and dismiss. Every feature that makes
         it more like a full notes app makes it less like the thing that was wanted.
       options:
         - label: This helps the first ten seconds after the hotkey.

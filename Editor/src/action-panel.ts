@@ -2,8 +2,8 @@
  * The ⌘K action panel — design frame 2a.
  *
  * Decision 17: everything that is not pin, switcher or new lives here, which is what lets the title
- * bar hold three icons forever. Built like the switcher and for the same reasons — inside the pane
- * (decision 14 wants every control in its own pane) rather than as a second window that would be a
+ * bar hold three icons forever. Built like the switcher and for the same reasons — inside the panel
+ * (decision 14 wants every control in its own panel) rather than as a second window that would be a
  * second web view to keep warm.
  *
  * Frame 2a lists thirteen rows and this ships fourteen — all thirteen, plus Duplicate Note, which
@@ -11,10 +11,10 @@
  *
  * The thirteenth row came back. It was retired on the reasoning that decision 29 had already
  * answered it — a dragged height was a floor, so there was nothing left to switch off — and
- * decision 40 reversed decision 29 outright: a drag now turns auto-sizing OFF and the pane holds
+ * decision 40 reversed decision 29 outright: a drag now turns auto-sizing OFF and the panel holds
  * that height, so the row is the way back on, on Raycast's own ⇧⌘/.
  *
- * Every row here is a thing Pane actually does, so none of them is a row that does nothing — the
+ * Every row here is a thing Plume actually does, so none of them is a row that does nothing — the
  * same rule the Shortcuts tab follows (decision 31).
  */
 
@@ -37,14 +37,14 @@ export interface ActionRow {
 
 interface ActionPanelOptions {
   root: HTMLElement;
-  pane: HTMLElement;
-  /** Whether the current pane is pinned, so the Pin row can say which way it goes. */
+  plume: HTMLElement;
+  /** Whether the current panel is pinned, so the Pin row can say which way it goes. */
   isPinned: () => boolean;
   /** Same, for the capture toggle. */
   isHiddenFromCapture: () => boolean;
   /** Same, for auto-sizing — which a drag can turn off without anyone pressing this row. */
   isAutoSizing: () => boolean;
-  /** Same, for whether the pane is drawn on every Space or belongs to the one it is on. */
+  /** Same, for whether the panel is drawn on every Space or belongs to the one it is on. */
   isOnEverySpace: () => boolean;
   run: (id: string) => void;
   /** The key caps to print for a row, from the bindings in force. Null keeps the row's own. */
@@ -68,7 +68,7 @@ const GROUPS: ActionRow[][] = [
     { id: "browseNotes", svg: `<path d="M4 5h16" /><path d="M4 12h16" /><path d="M4 19h16" />`, keys: ["⌘", "P"] },
   ],
   [
-    { id: "pinPane", svg: `<path d="M12 17v5" /><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z" />`, keys: ["⇧", "⌘", "P"] },
+    { id: "pinPlume", svg: `<path d="M12 17v5" /><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z" />`, keys: ["⇧", "⌘", "P"] },
     {
       id: "findInNote",
       svg: `<path d="m21 21-4.34-4.34" /><circle cx="11" cy="11" r="8" />`,
@@ -144,7 +144,7 @@ const GROUPS: ActionRow[][] = [
 ];
 
 export function mountActionPanel(options: ActionPanelOptions) {
-  const { root, pane } = options;
+  const { root, plume } = options;
   const search = root.querySelector<HTMLInputElement>(".actions__search")!;
   const list = root.querySelector<HTMLElement>(".actions__list")!;
 
@@ -152,7 +152,7 @@ export function mountActionPanel(options: ActionPanelOptions) {
   let selected = 0;
 
   function isOpen(): boolean {
-    return pane.hasAttribute("data-actions");
+    return plume.hasAttribute("data-actions");
   }
 
   /** See `desiredOverlayHeight` — shared with the switcher, which used to be a constant in Swift. */
@@ -162,7 +162,7 @@ export function mountActionPanel(options: ActionPanelOptions) {
 
   function open(): void {
     if (isOpen()) return;
-    pane.setAttribute("data-actions", "");
+    plume.setAttribute("data-actions", "");
     search.value = "";
     selected = 0;
     pointer.reset();
@@ -172,14 +172,14 @@ export function mountActionPanel(options: ActionPanelOptions) {
     // is exactly what happened while this list was capped shorter than its own content.
     list.scrollTop = 0;
     search.focus();
-    // Measured rather than assumed: the pane has to grow to hold this, and the panel's height
+    // Measured rather than assumed: the panel has to grow to hold this, and the panel's height
     // depends on how many rows survived the filter.
     options.onVisibilityChange(true, desiredHeight());
   }
 
   function close(): void {
     if (!isOpen()) return;
-    pane.removeAttribute("data-actions");
+    plume.removeAttribute("data-actions");
     options.onVisibilityChange(false, 0);
   }
 
@@ -202,13 +202,13 @@ export function mountActionPanel(options: ActionPanelOptions) {
 
   function labelFor(row: ActionRow): string {
     // The two rows whose label depends on state. "Pin Note" on a pinned note would be a lie about
-    // what pressing it does, and the same goes for a pane already hidden from capture — with no
+    // what pressing it does, and the same goes for a panel already hidden from capture — with no
     // checkmark column in this list, the label is the only place the current state can show.
-    if (row.id === "pinPane" && options.isPinned()) return t("editor.action.pinPane.on");
+    if (row.id === "pinPlume" && options.isPinned()) return t("editor.action.pinPlume.on");
     if (row.id === "hideFromCapture" && options.isHiddenFromCapture()) {
       return t("editor.action.hideFromCapture.on");
     }
-    // This one matters more than the other two, because auto-sizing turns itself off when the pane
+    // This one matters more than the other two, because auto-sizing turns itself off when the panel
     // is dragged (decision 40). The label is the only place that silent change is ever stated.
     if (row.id === "autoSizing" && !options.isAutoSizing()) {
       return t("editor.action.autoSizing.off");
@@ -286,9 +286,9 @@ export function mountActionPanel(options: ActionPanelOptions) {
   function activate(): void {
     const row = visible[selected];
     if (!row) return;
-    // Closed before the action runs, not after: several of these change the pane underneath the
+    // Closed before the action runs, not after: several of these change the panel underneath the
     // panel — Browse Notes opens the switcher in the same slot, Delete Note swaps the note out —
-    // and a panel still on screen while that happens is a panel describing the wrong pane.
+    // and a panel still on screen while that happens is a panel describing the wrong panel.
     close();
     options.run(row.id);
   }
@@ -298,20 +298,20 @@ export function mountActionPanel(options: ActionPanelOptions) {
   search.addEventListener("input", () => {
     selected = 0;
     render(search.value);
-    // Deliberately no height report here — the pane keeps whatever height opening this panel asked
+    // Deliberately no height report here — the panel keeps whatever height opening this panel asked
     // for, however far the filter narrows the list.
     //
     // This used to re-report on every keystroke, and the switcher's `reportHeight` explains why it
     // does not: "a window that resizes on every keystroke of a search is a window that will not sit
     // still". ⌘K was exempted on the grounds that it "has fourteen rows and settles" — true while
-    // this list had no cap, when the pane was sized to the note and filtering barely moved it.
-    // **Decision 114 ended that.** With a ceiling, opening ⌘K grows the pane to 627pt and typing two
+    // this list had no cap, when the panel was sized to the note and filtering barely moved it.
+    // **Decision 114 ended that.** With a ceiling, opening ⌘K grows the panel to 627pt and typing two
     // characters collapsed it to the height of two rows, which is the whole window jumping while
     // your eyes are on a menu. The reason for the exemption expired with the change that capped it.
     //
     // Reporting once is always enough here, and for the same reason it is enough in the switcher:
     // the panel is at its tallest the moment it opens, with nothing filtered out. A filter can only
-    // shrink it, and the pane is already big enough for the largest case.
+    // shrink it, and the panel is already big enough for the largest case.
   });
 
   search.addEventListener("keydown", (event) => {
@@ -335,9 +335,9 @@ export function mountActionPanel(options: ActionPanelOptions) {
     }
   });
 
-  // Escape from anywhere in the pane, capture phase — same reasoning as the switcher's: focus can
+  // Escape from anywhere in the panel, capture phase — same reasoning as the switcher's: focus can
   // sit on a row or nowhere at all, and an uncaught Escape falls through to CodeMirror, which
-  // dismisses the whole pane instead of the panel.
+  // dismisses the whole panel instead of the panel.
   document.addEventListener(
     "keydown",
     (event) => {

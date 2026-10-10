@@ -2,7 +2,7 @@
  * The ⌘P switcher — design frame 1c, all five states.
  *
  * Holds no note data of its own: Swift sends rows already ordered, banded and time-formatted by
- * PaneKit, and this file draws them. Ordering rules that matter (the ~8-note grouping threshold, the
+ * PlumeKit, and this file draws them. Ordering rules that matter (the ~8-note grouping threshold, the
  * recency bands, the relative-time format) live in Swift where they are unit-tested.
  */
 
@@ -12,7 +12,7 @@ import { plural, t } from "./i18n";
 export interface NoteSummary {
   filename: string;
   title: string;
-  /** Preformatted by PaneKit: "now", "42m", "2h", "Thu", "Jul 30", "May 12, 2025". */
+  /** Preformatted by PlumeKit: "now", "42m", "2h", "Thu", "Jul 30", "May 12, 2025". */
   time: string;
   preview: string;
   /** "Pinned", "Today", "Yesterday", "This week", "July"… Absent when the list is flat. */
@@ -25,7 +25,7 @@ export interface NoteSummary {
 
 interface SwitcherOptions {
   root: HTMLElement;
-  pane: HTMLElement;
+  plume: HTMLElement;
   onQuery: (query: string) => void;
   onOpen: (filename: string) => void;
   onCreate: (title: string) => void;
@@ -39,7 +39,7 @@ interface SwitcherOptions {
   onRequestDeleted: () => void;
   /** Permanent removal from the holding folder, per row. No undo behind this one. */
   onForgetDeleted: (storedName: string) => void;
-  /** Carries the height the panel wants, so the pane can grow to hold it (decision 45). */
+  /** Carries the height the panel wants, so the panel can grow to hold it (decision 45). */
   onVisibilityChange: (open: boolean, height: number) => void;
 }
 
@@ -58,7 +58,7 @@ const TRASH_SVG = `<svg width="12" height="12" viewBox="0 0 14 14" aria-hidden="
 const PIN_OUTLINE_SVG = `<svg width="12" height="12" viewBox="0 0 14 14" aria-hidden="true"><circle cx="7" cy="5" r="3" fill="none" stroke="currentColor" stroke-width="1.5"/><line x1="7" y1="8" x2="7" y2="13" stroke="currentColor" stroke-width="1.5"/></svg>`;
 
 export function mountSwitcher(options: SwitcherOptions) {
-  const { root, pane } = options;
+  const { root, plume } = options;
   const search = root.querySelector<HTMLInputElement>(".switcher__search")!;
   const list = root.querySelector<HTMLElement>(".switcher__list")!;
   const footer = root.querySelector<HTMLElement>(".switcher__footer")!;
@@ -69,15 +69,15 @@ export function mountSwitcher(options: SwitcherOptions) {
   let mode: Mode = "notes";
   /** Every deleted note, unfiltered. Searching this list is done here — see `applyQuery`. */
   let deleted: NoteSummary[] = [];
-  /** Whether this opening has told Swift how tall it wants the pane — see `reportHeight`. */
+  /** Whether this opening has told Swift how tall it wants the panel — see `reportHeight`. */
   let heightReported = false;
 
   function isOpen(): boolean {
-    return pane.hasAttribute("data-switcher");
+    return plume.hasAttribute("data-switcher");
   }
 
   function show(): void {
-    pane.setAttribute("data-switcher", "");
+    plume.setAttribute("data-switcher", "");
     search.value = "";
     query = "";
     selected = 0;
@@ -89,15 +89,15 @@ export function mountSwitcher(options: SwitcherOptions) {
   }
 
   /**
-   * Tells Swift how tall a pane this list wants — **once per opening**, at the first render.
+   * Tells Swift how tall a panel this list wants — **once per opening**, at the first render.
    *
    * Swift used to work this out from a constant: `54 + 430 + 34` handed to
-   * `paneHeight(forOverlay:)`, which adds the 54 again. So ⌘P grew the pane to 691pt whatever was
+   * `plumeHeight(forOverlay:)`, which adds the 54 again. So ⌘P grew the panel to 691pt whatever was
    * in it, and a six-note vault got a 370pt panel floating in the middle of it.
    *
    * Once, rather than on every keystroke: this list can go from 200 notes to three as you type, and
    * a window that resizes on every keystroke of a search is a window that will not sit still. The
-   * panel keeps its own max-height, so a list that outgrows the pane scrolls (decision 45).
+   * panel keeps its own max-height, so a list that outgrows the panel scrolls (decision 45).
    *
    * ⌘K used to re-report on every keystroke and now does not — see the note on its `input` handler.
    * Once is enough for both, and for the same reason: an unfiltered list is the tallest either panel
@@ -133,7 +133,7 @@ export function mountSwitcher(options: SwitcherOptions) {
 
   function close(): void {
     if (!isOpen()) return;
-    pane.removeAttribute("data-switcher");
+    plume.removeAttribute("data-switcher");
     options.onVisibilityChange(false, 0);
   }
 
@@ -145,9 +145,9 @@ export function mountSwitcher(options: SwitcherOptions) {
 
   // Escape, wherever the focus happens to be.
   //
-  // The search field's own keydown handler covers the normal case, but focus inside the pane can sit
+  // The search field's own keydown handler covers the normal case, but focus inside the panel can sit
   // on a row, on a button, or nowhere at all after a click — and then Escape fell through to
-  // CodeMirror's binding, which dismisses the whole pane instead of the list. Capture phase so it
+  // CodeMirror's binding, which dismisses the whole panel instead of the list. Capture phase so it
   // wins before the editor sees it.
   document.addEventListener(
     "keydown",
@@ -320,7 +320,7 @@ export function mountSwitcher(options: SwitcherOptions) {
               // list it is not in. Erasing it does. The old note here said that was "not a button
               // this app is going to grow", on the reasoning that retention already answers it.
               // It does not: retention answers "eventually", and the case that matters is a
-              // password pasted into the wrong pane, where the whole point is *now*. Without this
+              // password pasted into the wrong panel, where the whole point is *now*. Without this
               // the only way to remove it was to go and find the holding folder in Finder, which
               // is a worse thing to ask than a button.
               mode === "deleted"

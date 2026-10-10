@@ -1,6 +1,6 @@
 // T1, driven — decision 143.
 //
-// Drives the *debug* build (build/Pane Dev.app, decision 99) through the accessibility API and the
+// Drives the *debug* build (build/Plume Dev.app, decision 99) through the accessibility API and the
 // event tap, and reads every result off the file, never the screen. What it covers is the part of
 // T1 that a file can verify: the write model, the filename rules, external edits, undo, the keys
 // that write bytes. What it does not cover stays by hand: the typing script, anything about
@@ -13,8 +13,8 @@
 // terminal trusted for Accessibility, and nothing else claiming the debug hotkey. Notes it makes
 // are moved to ~/.trash-t1-<date> at the end (--keep leaves them).
 //
-// The traps this is written around are all in LAB.md: the pane is AXSystemDialog and is found by
-// subrole; a synthetic key goes to whatever is frontmost, so the pane is checked to be up before
+// The traps this is written around are all in LAB.md: the panel is AXSystemDialog and is found by
+// subrole; a synthetic key goes to whatever is frontmost, so the panel is checked to be up before
 // every burst; the first burst after ⌘N is dropped, so a Backspace warms it up; characters post
 // slower than 45 ms apart or they are lost; a posted mouse event must carry no modifier flags.
 
@@ -40,15 +40,15 @@ func check(_ item: String, _ name: String, _ pass: Bool, _ detail: String = "") 
 
 let projectRoot = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
     .deletingLastPathComponent().deletingLastPathComponent()
-let debugApp = projectRoot.appendingPathComponent("build/Pane Dev.app").standardizedFileURL.path
-let support = NSHomeDirectory() + "/Library/Application Support/Pane (Debug)"
+let debugApp = projectRoot.appendingPathComponent("build/Plume Dev.app").standardizedFileURL.path
+let support = NSHomeDirectory() + "/Library/Application Support/Plume (Debug)"
 let settings = try! JSONSerialization.jsonObject(with: Data(contentsOf: URL(fileURLWithPath: support + "/settings.json"))) as! [String: Any]
-let defaultVault = projectRoot.appendingPathComponent("build/Pane-scratch").path
+let defaultVault = projectRoot.appendingPathComponent("build/Plume-scratch").path
 let vault = NSString(string: (settings["vaultPath"] as? String) ?? defaultVault).expandingTildeInPath
 let recentlyDeleted = support + "/Recently Deleted"
 
 guard let app = NSWorkspace.shared.runningApplications.first(where: {
-    $0.bundleURL?.standardizedFileURL.path == debugApp && $0.bundleIdentifier == "com.tiylabs.pane.dev"
+    $0.bundleURL?.standardizedFileURL.path == debugApp && $0.bundleIdentifier == "com.tiylabs.plume.dev"
 }) else {
     print("The debug build is not running: make dev"); exit(2)
 }
@@ -69,10 +69,10 @@ do {
 
 func sleepMs(_ ms: Int) { usleep(UInt32(ms) * 1000) }
 
-/// The pane at a real origin, on *this* Space: layer 3, wider than 300, not parked. All three, or
-/// the badge matches. On-screen windows only — `.optionAll` listed a pane on another Space as up,
+/// The panel at a real origin, on *this* Space: layer 3, wider than 300, not parked. All three, or
+/// the badge matches. On-screen windows only — `.optionAll` listed a panel on another Space as up,
 /// and every keystroke then went to the terminal (LAB, 2026-09-17).
-func paneUp() -> Bool {
+func plumeUp() -> Bool {
     let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID) as! [[String: Any]]
     return list.contains { w in
         guard (w[kCGWindowOwnerPID as String] as? Int32) == pid, (w[kCGWindowLayer as String] as? Int) == 3,
@@ -106,30 +106,30 @@ enum K {
 /// The one key that has to go through the event tap: Carbon's global hotkey is not listening on a pid.
 func hotkey() { key(K.space, hotkeyFlags, tap: true) }
 
-/// Up means focused here. A run leaves the pane focused between items, and the one item that takes
+/// Up means focused here. A run leaves the panel focused between items, and the one item that takes
 /// the focus away (`hotkey`) gives it back itself; the run starts from a known state (`settleStart`).
 /// The focus reading is not trusted for this (LAB, 2026-10-10).
 func summon() {
-    if paneUp() { return }
+    if plumeUp() { return }
     hotkey()
     // Up, then focused: the focus arrives a beat after the window does.
-    for _ in 0..<30 { if paneUp() { sleepMs(250); return }; sleepMs(100) }
-    print("!! the pane did not come up with the focus"); exit(2)
+    for _ in 0..<30 { if plumeUp() { sleepMs(250); return }; sleepMs(100) }
+    print("!! the panel did not come up with the focus"); exit(2)
 }
 
 func dismiss() {
-    if !paneUp() { return }
+    if !plumeUp() { return }
     hotkey()
-    for _ in 0..<10 { if !paneUp() { return }; sleepMs(100) }
-    // Esc only (180): the hotkey leaves a focused pane up, and Esc is what dismisses it.
+    for _ in 0..<10 { if !plumeUp() { return }; sleepMs(100) }
+    // Esc only (180): the hotkey leaves a focused panel up, and Esc is what dismisses it.
     key(K.escape)
-    for _ in 0..<10 { if !paneUp() { return }; sleepMs(100) }
-    print("!! the pane did not park"); exit(2)
+    for _ in 0..<10 { if !plumeUp() { return }; sleepMs(100) }
+    print("!! the panel did not park"); exit(2)
 }
 
-/// The keyboard focus is in the pane: the system-wide focused element belongs to its pid. `nil` when
+/// The keyboard focus is in the panel: the system-wide focused element belongs to its pid. `nil` when
 /// the system cannot say, which it stopped doing on home on 2026-10-09 for every app (LAB).
-func focusInPane() -> Bool? {
+func focusInPlume() -> Bool? {
     var el: AnyObject?
     let r = AXUIElementCopyAttributeValue(AXUIElementCreateSystemWide(), kAXFocusedUIElementAttribute as CFString, &el)
     if r == .noValue { return false }
@@ -140,15 +140,15 @@ func focusInPane() -> Bool? {
 }
 
 /// Every burst is preceded by this. Keys go to the pid, so nothing can land in another app, but a
-/// burst into a parked pane would still be lost. Up is the whole test: the focus reading has
-/// answered a wrong "no" with the pane focused (LAB, 2026-10-10), and a key that misses fails a check.
-func needPane() {
-    for _ in 0..<10 { if paneUp() { return }; sleepMs(100) }
-    print("!! pane not up or not focused before typing"); exit(2)
+/// burst into a parked panel would still be lost. Up is the whole test: the focus reading has
+/// answered a wrong "no" with the panel focused (LAB, 2026-10-10), and a key that misses fails a check.
+func needPlume() {
+    for _ in 0..<10 { if plumeUp() { return }; sleepMs(100) }
+    print("!! plume not up or not focused before typing"); exit(2)
 }
 
 func type(_ text: String) {
-    needPane()
+    needPlume()
     for scalar in text.unicodeScalars {
         var chars = Array(String(scalar).utf16)
         for down in [true, false] {
@@ -163,7 +163,7 @@ func type(_ text: String) {
 
 /// ⌘N, then the warm-up Backspace the first burst after it needs (LAB, 2026-09-01).
 func newNote() {
-    needPane()
+    needPlume()
     key(K.n, .maskCommand)
     sleepMs(400)
     key(K.delete)
@@ -186,7 +186,7 @@ func descend(_ el: AXUIElement, role: String, depth: Int = 0) -> AXUIElement? {
     return nil
 }
 
-func paneElement() -> AXUIElement? {
+func plumeElement() -> AXUIElement? {
     let ax = AXUIElementCreateApplication(pid)
     for w in (attr(ax, kAXWindowsAttribute) as? [AXUIElement]) ?? [] where attr(w, kAXSubroleAttribute) as? String == "AXSystemDialog" {
         return w
@@ -195,7 +195,7 @@ func paneElement() -> AXUIElement? {
 }
 
 func textArea() -> AXUIElement {
-    guard let pane = paneElement(), let area = descend(pane, role: "AXTextArea") else { print("!! no text area"); exit(2) }
+    guard let plume = plumeElement(), let area = descend(plume, role: "AXTextArea") else { print("!! no text area"); exit(2) }
     return area
 }
 
@@ -214,7 +214,7 @@ func caretOffset() -> Int? {
     return range.location
 }
 
-/// The text drawn inside the element carrying `className` — `pane__banner`, `pane__toast`. WebKit
+/// The text drawn inside the element carrying `className` — `plume__banner`, `plume__toast`. WebKit
 /// hands the DOM class list to AX as `AXDOMClassList`, and a `hidden` element is not in the tree.
 func surface(_ className: String) -> String {
     func walk(_ el: AXUIElement, _ inside: Bool, _ depth: Int, _ out: inout [String]) {
@@ -224,9 +224,9 @@ func surface(_ className: String) -> String {
            let v = attr(el, kAXValueAttribute) as? String, !v.isEmpty { out.append(v) }
         for kid in (attr(el, kAXChildrenAttribute) as? [AXUIElement]) ?? [] { walk(kid, here, depth + 1, &out) }
     }
-    guard let pane = paneElement() else { return "" }
+    guard let plume = plumeElement() else { return "" }
     var out: [String] = []
-    walk(pane, false, 0, &out)
+    walk(plume, false, 0, &out)
     return out.joined(separator: " ")
 }
 
@@ -333,7 +333,7 @@ func itemExternalEdit() {
     let title = (read(name) ?? "").split(separator: "\n").first.map(String.init) ?? ""
     write(name, title + "\nreplaced by another editor\n")
     let arrived = waitFor("arrival", { renderedText().contains("replaced by another editor") })
-    check(item, "an external write arrives in the open pane", arrived)
+    check(item, "an external write arrives in the open plume", arrived)
     // Editing the first line after an external write must not rename (103: the name froze).
     summon(); key(K.up, .maskCommand); key(K.right, .maskCommand); type(" Z")
     settle()
@@ -373,7 +373,7 @@ func itemFinderRenameFollowed() {
     summon(); key(K.down, .maskCommand); type(" tail")
     settle()
     let hits = notes().filter { $0.hasPrefix(timestamp(name)) && ($0.contains("moved-by-finder") || $0.contains("t1-finderrename")) }
-    check(item, "the pane follows a Finder rename, with no duplicate", hits == [renamed], hits.joined(separator: ", "))
+    check(item, "the panel follows a Finder rename, with no duplicate", hits == [renamed], hits.joined(separator: ", "))
     check(item, "the next keystroke lands in the renamed file", (read(renamed) ?? "").contains("body tail"))
 }
 
@@ -533,23 +533,23 @@ func itemDeletedElsewhere() {
     settle()
     let bTitle = "T1 \(item)B " + String(b.split(separator: "-").last!.dropLast(3))
 
-    // With the pane up: another process takes the file, as iCloud does for the other Mac's ⌃X.
+    // With the panel up: another process takes the file, as iCloud does for the other Mac's ⌃X.
     try? fm.moveItem(atPath: vault + "/" + b, toPath: gone + "/" + b)
-    _ = waitFor("the pane to move on") { renderedText().hasPrefix("T1 \(item)A") }
-    check(item, "the pane moves on to the last note", renderedText().hasPrefix("T1 \(item)A"))
-    check(item, "no banner over the note it moved to", surface("pane__banner").isEmpty, surface("pane__banner"))
-    check(item, "a toast names the deleted note", surface("pane__toast") == "Deleted on another device: \(bTitle)", surface("pane__toast"))
+    _ = waitFor("the panel to move on") { renderedText().hasPrefix("T1 \(item)A") }
+    check(item, "the panel moves on to the last note", renderedText().hasPrefix("T1 \(item)A"))
+    check(item, "no banner over the note it moved to", surface("plume__banner").isEmpty, surface("plume__banner"))
+    check(item, "a toast names the deleted note", surface("plume__toast") == "Deleted on another device: \(bTitle)", surface("plume__toast"))
     sleepMs(6000)
-    check(item, "…and leaves", surface("pane__toast").isEmpty && surface("pane__banner").isEmpty, surface("pane__toast"))
+    check(item, "…and leaves", surface("plume__toast").isEmpty && surface("plume__banner").isEmpty, surface("plume__toast"))
     check(item, "the note stays deleted (117)", !fm.fileExists(atPath: vault + "/" + b))
 
-    // With the pane parked: the toast waits for the summon, because nobody saw it otherwise.
+    // With the panel parked: the toast waits for the summon, because nobody saw it otherwise.
     dismiss()
     try? fm.moveItem(atPath: vault + "/" + a, toPath: gone + "/" + a)
     sleepMs(1500)
     summon(); sleepMs(300)
-    check(item, "parked, the toast waits for the summon", surface("pane__toast") == "Deleted on another device: T1 \(item)A " + String(a.split(separator: "-").last!.dropLast(3)), surface("pane__toast"))
-    check(item, "…with no banner", surface("pane__banner").isEmpty, surface("pane__banner"))
+    check(item, "parked, the toast waits for the summon", surface("plume__toast") == "Deleted on another device: T1 \(item)A " + String(a.split(separator: "-").last!.dropLast(3)), surface("plume__toast"))
+    check(item, "…with no banner", surface("plume__banner").isEmpty, surface("plume__banner"))
     made.remove(a); made.remove(b)
 }
 
@@ -569,7 +569,7 @@ func itemBoldWritesMarkers() {
     check(item, "⌘A then ⌘B on a list item keeps the marker outside (153)", (read(list) ?? "").hasSuffix("1. **Hi**\n"), (read(list) ?? "").split(separator: "\n").last.map(String.init) ?? "")
 }
 
-/// Decision 180: the hotkey reads the focus, not just whether the pane is up, and a pin no longer
+/// Decision 180: the hotkey reads the focus, not just whether the panel is up, and a pin no longer
 /// changes what it does. Another app takes the focus by AppleScript, so no click is posted.
 func itemHotkeyReadsFocus() {
     let item = "hotkey"
@@ -580,22 +580,22 @@ func itemHotkeyReadsFocus() {
         if pinned { key(K.p, [.maskCommand, .maskShift]); sleepMs(300) }
 
         takeFocusElsewhere()
-        if let focus = focusInPane() {
-            check(item, "\(tag): the pane stays up when another app takes the focus", paneUp() && !focus)
+        if let focus = focusInPlume() {
+            check(item, "\(tag): the panel stays up when another app takes the focus", plumeUp() && !focus)
         } else {
-            check(item, "\(tag): the pane stays up when another app takes the focus (AX focus unreadable: up only)", paneUp())
+            check(item, "\(tag): the panel stays up when another app takes the focus (AX focus unreadable: up only)", plumeUp())
         }
         hotkey()
         // Unreadable focus is proved by the next press instead: with the hotkey toggling, it hides
-        // only a pane that has the focus.
-        let back = waitFor("focus back", timeoutMs: 1500) { paneUp() && focusInPane() != false }
-        check(item, "\(tag): the hotkey gives an unfocused pane the focus back, not a dismiss (180)", back,
-              back ? "" : (paneUp() ? "up, focus elsewhere" : "parked"))
+        // only a panel that has the focus.
+        let back = waitFor("focus back", timeoutMs: 1500) { plumeUp() && focusInPlume() != false }
+        check(item, "\(tag): the hotkey gives an unfocused panel the focus back, not a dismiss (180)", back,
+              back ? "" : (plumeUp() ? "up, focus elsewhere" : "parked"))
         summon(); sleepMs(300)
 
         hotkey()
-        let parked = waitFor("parks", timeoutMs: 1200) { !paneUp() }
-        check(item, toggles ? "\(tag): the hotkey hides a focused pane (180)" : "\(tag): Esc only, the hotkey never hides the pane (180)",
+        let parked = waitFor("parks", timeoutMs: 1200) { !plumeUp() }
+        check(item, toggles ? "\(tag): the hotkey hides a focused panel (180)" : "\(tag): Esc only, the hotkey never hides the panel (180)",
               parked == toggles, parked ? "parked" : "up")
         sleepMs(300)   // past toggle()'s 0.25 s double-delivery guard, or the summon is swallowed
         summon(); sleepMs(300)
@@ -619,11 +619,11 @@ func takeFocusElsewhere() {
     }
     let finderWasFront = NSWorkspace.shared.frontmostApplication?.bundleIdentifier == "com.apple.finder"
     activate("Finder")
-    if !finderWasFront, focusInPane() == nil { sleepMs(800); return }
-    if waitFor("focus leaves", timeoutMs: 1000, { focusInPane() == false }) { return }
+    if !finderWasFront, focusInPlume() == nil { sleepMs(800); return }
+    if waitFor("focus leaves", timeoutMs: 1000, { focusInPlume() == false }) { return }
     let wasRunning = NSWorkspace.shared.runningApplications.contains { $0.bundleIdentifier == "com.apple.calculator" }
     activate("Calculator")
-    if focusInPane() == nil { sleepMs(800) } else { _ = waitFor("focus leaves", { focusInPane() == false }) }
+    if focusInPlume() == nil { sleepMs(800) } else { _ = waitFor("focus leaves", { focusInPlume() == false }) }
     if !wasRunning { startedCalculator = true }
 }
 var startedCalculator = false
@@ -657,13 +657,13 @@ let keep = args.contains("--keep")
 let wanted = args.filter { !$0.hasPrefix("--") }
 print("T1 driver → \(debugApp)\n  vault \(vault)\n")
 
-/// A pane left up by an earlier session may not have the focus, and nothing can say which. One press
-/// focuses an unfocused pane and hides a focused one (180), so a second press after a hide brings it
+/// A panel left up by an earlier session may not have the focus, and nothing can say which. One press
+/// focuses an unfocused panel and hides a focused one (180), so a second press after a hide brings it
 /// back focused. Either way the run starts up and focused.
 func settleStart() {
-    guard paneUp() else { return }
+    guard plumeUp() else { return }
     hotkey(); sleepMs(400)
-    if !paneUp() { hotkey(); sleepMs(600) }
+    if !plumeUp() { hotkey(); sleepMs(600) }
 }
 settleStart()
 for (name, run) in items where wanted.isEmpty || wanted.contains(name) {
@@ -671,7 +671,7 @@ for (name, run) in items where wanted.isEmpty || wanted.contains(name) {
     run()
 }
 
-// Leave the pane on a note that will survive the cleanup, then move this run's notes out.
+// Leave the panel on a note that will survive the cleanup, then move this run's notes out.
 if !keep && !made.isEmpty {
     summon(); newNote(); type("T1 run finished"); settle(); dismiss()
     let day = { let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"; return f.string(from: Date()) }()
@@ -681,9 +681,9 @@ if !keep && !made.isEmpty {
         try? fm.moveItem(atPath: vault + "/" + name, toPath: trash + "/" + name)
     }
     print("\nmoved \(made.count) notes to \(trash)")
-    sleepMs(1500)   // let the watcher digest the moves before asking for the pane
+    sleepMs(1500)   // let the watcher digest the moves before asking for the panel
 }
-if !paneUp() { hotkey(); sleepMs(800) }   // developing mode: leave the build up for a hand pass
+if !plumeUp() { hotkey(); sleepMs(800) }   // developing mode: leave the build up for a hand pass
 
 let failed = checks.filter { !$0.pass }
 print("\n\(failed.isEmpty ? "✓" : "✗") \(checks.count) checks, \(failed.count) failing")

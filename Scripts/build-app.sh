@@ -1,21 +1,21 @@
 #!/usr/bin/env bash
 #
-# Assembles Pane.app around the SwiftPM executable.
+# Assembles Plume.app around the SwiftPM executable.
 #
 # There is no Xcode project on purpose — `swift build` works with only the Command Line Tools, so
 # this script is the whole build. It compiles the editor bundle, compiles the Swift binary, lays out
-# the bundle, and signs it — with a Developer ID when PANE_SIGN_IDENTITY is set (the release
+# the bundle, and signs it — with a Developer ID when PLUME_SIGN_IDENTITY is set (the release
 # workflow), ad-hoc otherwise (arm64 binaries must carry at least an ad-hoc signature to launch, and
 # rewriting the bundle invalidates the signature SwiftPM applied).
 #
 #   Scripts/build-app.sh                 release build for the host architecture
-#   Scripts/build-app.sh --debug         isolated Pane Dev.app, faster, for iterating
-#   Scripts/build-app.sh --dev --release isolated Pane Dev.app with release optimization
+#   Scripts/build-app.sh --debug         isolated Plume Dev.app, faster, for iterating
+#   Scripts/build-app.sh --dev --release isolated Plume Dev.app with release optimization
 #   Scripts/build-app.sh --universal     arm64 + x86_64, for a release artifact
 #   Scripts/build-app.sh --skip-editor   reuse the existing Editor/dist
 #   Scripts/build-app.sh --binary PATH   assemble and sign a prebuilt binary, skipping Swift build
 #
-#   PANE_SIGN_IDENTITY="Developer ID Application: ..." Scripts/build-app.sh --universal
+#   PLUME_SIGN_IDENTITY="Developer ID Application: ..." Scripts/build-app.sh --universal
 #                                        hardened-runtime Developer ID signature, for release
 #
 set -euo pipefail
@@ -55,11 +55,11 @@ if [[ -n "$PREBUILT_BIN" && -n "${ARCH_ARGS:+set}" ]]; then
 	exit 2
 fi
 
-VERSION="${PANE_VERSION:-0.1.0}"
-BUILD_NUMBER="${PANE_BUILD:-$(git rev-list --count HEAD 2>/dev/null || echo 1)}"
+VERSION="${PLUME_VERSION:-0.1.0}"
+BUILD_NUMBER="${PLUME_BUILD:-$(git rev-list --count HEAD 2>/dev/null || echo 1)}"
 
-APP_NAME=Pane
-[[ "$CHANNEL" == "dev" ]] && APP_NAME="Pane Dev"
+APP_NAME=Plume
+[[ "$CHANNEL" == "dev" ]] && APP_NAME="Plume Dev"
 APP="$ROOT/build/$APP_NAME.app"
 CONTENTS="$APP/Contents"
 
@@ -86,12 +86,12 @@ fi
 # --universal — and never on a machine whose PATH finds a modern bash first, which is why this ran
 # clean here for weeks and failed on CI's first attempt.
 if [[ -n "$PREBUILT_BIN" ]]; then
-	say "Using prebuilt Pane binary ($PREBUILT_BIN)"
+	say "Using prebuilt Plume binary ($PREBUILT_BIN)"
 	BIN="$PREBUILT_BIN"
 else
-	say "Building Pane ($CONFIG${ARCH_ARGS:+, universal})"
-	swift build -c "$CONFIG" ${ARCH_ARGS[@]+"${ARCH_ARGS[@]}"} --product Pane
-	BIN="$(swift build -c "$CONFIG" ${ARCH_ARGS[@]+"${ARCH_ARGS[@]}"} --product Pane --show-bin-path)/Pane"
+	say "Building Plume ($CONFIG${ARCH_ARGS:+, universal})"
+	swift build -c "$CONFIG" ${ARCH_ARGS[@]+"${ARCH_ARGS[@]}"} --product Plume
+	BIN="$(swift build -c "$CONFIG" ${ARCH_ARGS[@]+"${ARCH_ARGS[@]}"} --product Plume --show-bin-path)/Plume"
 fi
 [[ -f "$BIN" ]] || { echo "error: binary not found at $BIN" >&2; exit 1; }
 
@@ -100,9 +100,9 @@ say "Assembling $APP"
 rm -rf "$APP"
 mkdir -p "$CONTENTS/MacOS" "$CONTENTS/Resources"
 
-cp "$BIN" "$CONTENTS/MacOS/Pane"
+cp "$BIN" "$CONTENTS/MacOS/Plume"
 # GitHub artifact downloads reset file modes, including the executable bit.
-chmod +x "$CONTENTS/MacOS/Pane"
+chmod +x "$CONTENTS/MacOS/Plume"
 cp -R "$ROOT/Editor/dist/." "$CONTENTS/Resources/Editor/"
 
 # Static bundle resources — currently the menu bar template images. Flat rather than in a
@@ -112,8 +112,12 @@ if [[ -d "$ROOT/Resources" ]]; then
 	cp -R "$ROOT/Resources/." "$CONTENTS/Resources/"
 fi
 
+# MIT requires the copyright and permission notice to travel with every copy, binaries included —
+# Plume's own LICENSE and the notices for the packages bundled into the editor.
+cp "$ROOT/LICENSE" "$ROOT/THIRD_PARTY_NOTICES.md" "$CONTENTS/Resources/"
+
 # The preset markdown themes (decision 19). They ship inside the bundle and are copied out to
-# ~/Library/Application Support/Pane/Themes the first time Pane runs, where they are ordinary files
+# ~/Library/Application Support/Plume/Themes the first time Plume runs, where they are ordinary files
 # the user owns and can edit or delete.
 if [[ -d "$ROOT/Themes" ]]; then
 	mkdir -p "$CONTENTS/Resources/Themes"
@@ -121,7 +125,7 @@ if [[ -d "$ROOT/Themes" ]]; then
 fi
 
 # The interface languages (Locales/<code>/strings.json + welcome.md). Copied whole, so a new language
-# directory ships with no edit here. The Swift side reads them at runtime (PaneKit/Localization.swift)
+# directory ships with no edit here. The Swift side reads them at runtime (PlumeKit/Localization.swift)
 # and the web bundle has already inlined its `editor.*` half at build time.
 if [[ -d "$ROOT/Locales" ]]; then
 	mkdir -p "$CONTENTS/Resources/Locales"
@@ -151,10 +155,10 @@ fi
 # The channel is stamped into the bundle; inherited environment cannot redirect its settings.
 # A dev channel can use release optimization without taking the installed app's identity or data.
 if [[ "$CHANNEL" == "dev" ]]; then
-	/usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.tiylabs.pane.dev" "$CONTENTS/Info.plist"
-	/usr/libexec/PlistBuddy -c "Set :CFBundleName Pane Dev" "$CONTENTS/Info.plist"
-	/usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string Pane Dev" "$CONTENTS/Info.plist"
-	/usr/libexec/PlistBuddy -c "Add :PaneScratchBuild bool true" "$CONTENTS/Info.plist"
+	/usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.tiylabs.plume.dev" "$CONTENTS/Info.plist"
+	/usr/libexec/PlistBuddy -c "Set :CFBundleName Plume Dev" "$CONTENTS/Info.plist"
+	/usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string Plume Dev" "$CONTENTS/Info.plist"
+	/usr/libexec/PlistBuddy -c "Add :PlumeScratchBuild bool true" "$CONTENTS/Info.plist"
 fi
 
 printf 'APPL????' > "$CONTENTS/PkgInfo"
@@ -167,7 +171,7 @@ if [[ -f "$ICON" ]]; then
 fi
 
 # ---- 4. signature -----------------------------------------------------------------------------
-# Two modes, chosen by PANE_SIGN_IDENTITY:
+# Two modes, chosen by PLUME_SIGN_IDENTITY:
 #
 #   unset — ad-hoc. Local and CI builds. An arm64 Mach-O with no signature at all will not launch, so
 #           this is not optional, but it carries no identity and Gatekeeper will not accept it.
@@ -175,9 +179,9 @@ fi
 #           requires. No --deep: the bundle holds exactly one executable and no nested code, and
 #           Apple deprecates --deep for signing. No entitlements file either — WKWebView, Carbon
 #           hotkeys and SMAppService need none under the hardened runtime.
-if [[ -n "${PANE_SIGN_IDENTITY:-}" ]]; then
-	say "Signing with Developer ID: $PANE_SIGN_IDENTITY"
-	codesign --force --options runtime --timestamp --sign "$PANE_SIGN_IDENTITY" "$APP"
+if [[ -n "${PLUME_SIGN_IDENTITY:-}" ]]; then
+	say "Signing with Developer ID: $PLUME_SIGN_IDENTITY"
+	codesign --force --options runtime --timestamp --sign "$PLUME_SIGN_IDENTITY" "$APP"
 else
 	say "Ad-hoc signing"
 	codesign --force --sign - --timestamp=none "$APP"

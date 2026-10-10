@@ -1,7 +1,7 @@
 /*
  * The line under the caret, described once.
  *
- * Every keyboard rule in Pane used to re-derive "what line am I on" by itself — the same regex
+ * Every keyboard rule in Plume used to re-derive "what line am I on" by itself — the same regex
  * written four times, the tree resolved with two different biases, and decisions 109, 123 and 135
  * are each a place where two of those derivations disagreed. `lineContext` computes the answer once
  * per keystroke, and a key's rules (`backspace.ts`, `enter.ts`, `shift-enter.ts`) are tables over it

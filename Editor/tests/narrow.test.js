@@ -1,5 +1,5 @@
 /**
- * The ⌘K panel at a pane width nobody designed the labels for.
+ * The ⌘K panel at a panel width nobody designed the labels for.
  *
  * Run at **380**, which is inside the band this rule exists for: below 420 the shortcut chips go,
  * and 380 is far enough in that a stray pixel of rounding cannot decide the result. The suite that
@@ -21,8 +21,8 @@ export async function run(view, bar, doc) {
   };
   const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-  window.paneHost.loadNote("2026-09-12-1200-note.md", "Groceries\n", 0, false);
-  window.paneHost.openActions();
+  window.plumeHost.loadNote("2026-09-12-1200-note.md", "Groceries\n", 0, false);
+  window.plumeHost.openActions();
   // Past the chips' 150ms transition, which starts from the stylesheet's own initial value.
   await sleep(400);
 
@@ -53,7 +53,7 @@ export async function run(view, bar, doc) {
   const widest = Math.max(...keys.map((el) => el.getBoundingClientRect().width));
   check("and they take no width", 0, Math.round(widest));
 
-  // Not `display: none`: decision 41's rule is that nothing in the pane may use it, and a chip group
+  // Not `display: none`: decision 41's rule is that nothing in the panel may use it, and a chip group
   // that is laid out but zero-wide is also what lets the width animate rather than snap.
   //
   // Read as **height**, not as a computed `display`. `getComputedStyle` is stale in this probe —

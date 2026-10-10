@@ -1,11 +1,11 @@
 /*
  * The ⌘K action panel — design frame 2a.
  *
- * Same construction as the switcher: absolutely positioned inside the pane, 54px down, centred, with
- * the pane's own material around it. It is narrower (400 against the switcher's 460) because it is a
+ * Same construction as the switcher: absolutely positioned inside the panel, 54px down, centred, with
+ * the panel's own material around it. It is narrower (400 against the switcher's 460) because it is a
  * list of short labels rather than of note titles with a second line under each.
  *
- * Frame 2a draws the pane behind it at 45% — the only overlay the design dims. Frame 1c never shows
+ * Frame 2a draws the panel behind it at 45% — the only overlay the design dims. Frame 1c never shows
  * the switcher in context at all, so this is following the one frame that says something rather than
  * inventing a rule for both. If they should match, the switcher is the one to change.
  */
@@ -22,13 +22,13 @@
   display: flex;
   flex-direction: column;
   /* A maximum, not a width — see `--overlay-margin-x`. `max-width: calc(100% - 32px)` was the old
-   * concession to a narrow pane and far too small a one: it only bit below 492pt, and left 16pt
+   * concession to a narrow panel and far too small a one: it only bit below 492pt, and left 16pt
    * margins when it did. */
   width: min(var(--overlay-width), 100% - 2 * var(--overlay-margin-x));
 
-  /* The design ceiling and the pane's, lower wins — the switcher's rule, the switcher's tokens, and
+  /* The design ceiling and the panel's, lower wins — the switcher's rule, the switcher's tokens, and
    * `--overlay-panel-height` shared with it so the two overlays are the same rectangle. Without the
-   * pane-relative half, a sixteen-row panel on a short pane runs off the bottom edge and the last
+   * panel-relative half, a sixteen-row panel on a short panel runs off the bottom edge and the last
    * rows are simply unreachable. */
   max-height: min(
     var(--overlay-panel-height),
@@ -44,11 +44,11 @@
   overflow: hidden;
 }
 
-.pane:not([data-actions]) .actions {
+.plume:not([data-actions]) .actions {
   display: none;
 }
 
-/* The pane recedes while EITHER overlay is open. Not the banner: a conflict that fired while the
+/* The panel recedes while EITHER overlay is open. Not the banner: a conflict that fired while the
  * panel was open is the one thing here that must not get quieter.
  *
  * Frame 2a draws this behind ⌘K and frame 1c never shows the switcher in context, so it shipped on
@@ -60,14 +60,14 @@
  * and the measured objection to that was ghosting — the note's headings showing through the panel,
  * a selected row's fill turning the ghost into a doubled highlight. Dimming what is behind is what
  * makes a glass panel legible instead of busy. */
-.pane[data-actions] .pane__titlebar,
-.pane[data-actions] .pane__content,
-.pane[data-actions] .pane__footer,
-.pane[data-actions] .format-bar,
-.pane[data-switcher] .pane__titlebar,
-.pane[data-switcher] .pane__content,
-.pane[data-switcher] .pane__footer,
-.pane[data-switcher] .format-bar {
+.plume[data-actions] .plume__titlebar,
+.plume[data-actions] .plume__content,
+.plume[data-actions] .plume__footer,
+.plume[data-actions] .format-bar,
+.plume[data-switcher] .plume__titlebar,
+.plume[data-switcher] .plume__content,
+.plume[data-switcher] .plume__footer,
+.plume[data-switcher] .format-bar {
   opacity: var(--overlay-dim);
   transition: opacity 120ms ease-out;
 }
@@ -77,7 +77,7 @@
  * The dim above said "this is not what you are working in" and nothing enforced it: a click landed
  * in the note, moved the caret there and took focus out of the panel's own input, so the next
  * keystroke was typed into the document while the panel sat over it looking like it had the
- * keyboard. Measured on the running app: with ⌘K open, one click low in the pane and one keypress
+ * keyboard. Measured on the running app: with ⌘K open, one click low in the panel and one keypress
  * wrote a character into the note.
  *
  * A scrim rather than `pointer-events: none` on the content, because the click has to be *caught*
@@ -86,15 +86,15 @@
  *
  * It covers the title bar too. The buttons under there open the very overlays this is dismissing,
  * and a first click that closes the panel is a better answer than one that swaps it for another. */
-.pane__scrim {
+.plume__scrim {
   position: absolute;
   inset: 0;
   z-index: var(--layer-scrim);
   display: none;
 }
 
-.pane[data-actions] .pane__scrim,
-.pane[data-switcher] .pane__scrim {
+.plume[data-actions] .plume__scrim,
+.plume[data-switcher] .plume__scrim {
   display: block;
 }
 
@@ -125,7 +125,7 @@
 .actions__list {
   overflow-y: auto;
   /* `min-height: 0` so the list can actually shrink inside the panel's flex column when the panel is
-   * capped by the pane's height — without it a flex item refuses to go below its content size and
+   * capped by the panel's height — without it a flex item refuses to go below its content size and
    * the cap does nothing. */
   min-height: 0;
 
@@ -136,7 +136,7 @@
    * (14 × 30px, four group paddings, three hairlines), so a 420px cap put Delete Note below the fold
    * on every open — and reopening without re-summoning left the list scrolled with New Note, *the
    * selected row*, above it, so ⏎ ran an action nobody could see. A row you cannot get to is not a
-   * row. With no cap, `desiredHeight()` falls to `list.scrollHeight` and the pane grows to hold
+   * row. With no cap, `desiredHeight()` falls to `list.scrollHeight` and the panel grows to hold
    * every one of them.
    *
    * What changed is that "below the fold" no longer means "out of reach". `open()` resets the scroll
@@ -144,9 +144,9 @@
    * at the ends instead of wrapping — so every row is a held-down ArrowDown away, which is how
    * Raycast runs a list of twenty-six actions in a 302px viewport.
    *
-   * What it buys is the pane. Growing to hold all fourteen rows asked Swift for 54 + 467 + 16 =
+   * What it buys is the panel. Growing to hold all fourteen rows asked Swift for 54 + 467 + 16 =
    * 537px whatever was in the note, which is a lot of window to open a menu in, and it made ⌘K and
-   * ⌘P grow the pane to two different heights for no reason a reader could see.
+   * ⌘P grow the panel to two different heights for no reason a reader could see.
    *
    * The cap itself sits on `.actions` above rather than here, so that this list gets exactly the
    * room the panel has left over — which is more than the switcher's, by the height of the footer
@@ -226,9 +226,9 @@
   opacity: 1;
 }
 
-/* ---- Narrow panes: the label wins ---------------------------------------------------------------
+/* ---- Narrow panels: the label wins ---------------------------------------------------------------
  *
- * **420px is measured, not chosen.** It is the pane width at which the longest row stops fitting
+ * **420px is measured, not chosen.** It is the panel width at which the longest row stops fitting
  * beside its chips — and the longest row is *Disable* Window Auto-sizing, three pixels wider than
  * the Enable state you can see in a screenshot. Tuning to the label that happens to be on screen
  * would have left the fault behind the toggle (decision 82's habit, and decision 100's trap).
@@ -238,13 +238,13 @@
  * Reported as `Enable Win…`, `Copy as Ma…`, `Keep on Thi…` — six of fifteen rows unreadable at the
  * minimum width, which is a panel that cannot answer the only question it exists to answer.
  *
- * The viewport is the pane: the web view fills the window, so `max-width` here is the pane's own
+ * The viewport is the panel: the web view fills the window, so `max-width` here is the panel's own
  * width and needs no plumbing from Swift. **Not a container query** — `container-type: inline-size`
  * would add containment to the element whose height feeds `reportContentHeight`, and that is a risk
  * this does not need to take for a number that is already the right one.
  *
  * `PanelGeometry.minimumWidth` is 340 rather than 320 for this rule's sake: 340 is the narrowest
- * pane at which every row is fully readable *with* the chips gone, so there is no width left where
+ * panel at which every row is fully readable *with* the chips gone, so there is no width left where
  * ⌘K prints a label you cannot finish. */
 @media (max-width: 419px) {
   .actions__keys {

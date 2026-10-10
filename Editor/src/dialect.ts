@@ -1,9 +1,9 @@
 /*
- * Pane's markdown: CommonMark and GFM, with three rules of its own — decision 158.
+ * Plume's markdown: CommonMark and GFM, with three rules of its own — decision 158.
  *
  * The parser is the one reading every part of the app agrees on — what is drawn, where the caret
  * rests, what ⏎ continues, what renumbering counts — so the rules live here and nowhere else. The
- * bytes are never touched: a file means what it says, and Pane reads a few edge cases differently
+ * bytes are never touched: a file means what it says, and Plume reads a few edge cases differently
  * from GitHub.
  *
  *   1. **A block marker waits for its space.** `#`, `-`, `1.` and `>` on their own are text; `# `,
@@ -128,7 +128,7 @@ const task = originalLeaf("TaskList");
  * The same rule for a bullet list's *next* item. CommonMark ends a bullet list at a line that is also
  * a rule, so `- a` ⏎ `- --` started a second list. That check lives in the list's markup skipper,
  * which the config cannot replace, so it is wrapped where it lives. The object is lezer's own and
- * shared by every markdown parser in the bundle; Pane has one.
+ * shared by every markdown parser in the bundle; Plume has one.
  */
 {
   const parser = markdownLanguage.parser as unknown as {
@@ -137,16 +137,16 @@ const task = originalLeaf("TaskList");
   };
   const id = parser.nodeSet.types.find((t) => t.name === "BulletList")!.id;
   const skip = parser.skipContextMarkup[id]!;
-  if (!(skip as { pane?: true }).pane) {
+  if (!(skip as { plume?: true }).plume) {
     const wrapped = (bl: { value: number }, cx: BlockContext, line: Line): boolean =>
       skip(bl, cx, line) ||
       (line.indent < line.baseIndent + 4 && bulletSize(line) > 0 && spaced(line, 1) && line.next === bl.value);
-    (wrapped as { pane?: true }).pane = true;
+    (wrapped as { plume?: true }).plume = true;
     parser.skipContextMarkup[id] = wrapped;
   }
 }
 
-export const paneDialect: MarkdownConfig = {
+export const plumeDialect: MarkdownConfig = {
   parseBlock: [
     {
       name: "ATXHeading",

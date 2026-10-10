@@ -1,7 +1,7 @@
 /*
  * Ordered lists that count.
  *
- * Pane draws the number the buffer holds rather than rendering one, so a list that says 1, 3, 4
+ * Plume draws the number the buffer holds rather than rendering one, so a list that says 1, 3, 4
  * after you delete an item says 1, 3, 4 forever — there is no renderer to quietly fix it, and
  * retyping the markers by hand is the only cure. Every editor anyone has used renumbers instead.
  *

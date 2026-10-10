@@ -1,9 +1,9 @@
 {
-  "name": "pane-editor",
+  "name": "plume-editor",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "The single web bundle Pane loads into its WKWebView: CodeMirror 6 with live-preview decorations, the pane chrome, and the switcher.",
+  "description": "The single web bundle Plume loads into its WKWebView: CodeMirror 6 with live-preview decorations, the panel chrome, and the switcher.",
   "license": "MIT",
   "scripts": {
     "build": "node build.mjs",

@@ -1,6 +1,6 @@
 # Locales
 
-Every string Pane shows lives here — the native UI (menus, Settings, alerts) and the editor
+Every string Plume shows lives here — the native UI (menus, Settings, alerts) and the editor
 (⌘K, ⌘P, find bar, format bar) read the **same files**. Currently: `en`, `zh-Hans`.
 
 ```
@@ -42,7 +42,7 @@ folder. The test suite holds your directory to the same rules as the others, and
 | Prefix | Who reads it |
 |---|---|
 | `editor.*` | The web editor. Inlined into the bundle at build time by `Editor/build.mjs`. |
-| everything else | Swift (`tr("key")` in the app, `L10n.t` in PaneKit). |
+| everything else | Swift (`tr("key")` in the app, `L10n.t` in PlumeKit). |
 
 ## Plurals
 
@@ -58,7 +58,7 @@ picks between them:
 - Chinese, Japanese, Korean, Vietnamese, Thai use `other` **only** — supply no `.one`.
 - `other` is required in every language.
 - The editor uses `Intl.PluralRules`, so it needs no code for any language. The Swift side has a
-  small table, `L10n.pluralCategory` in `Sources/PaneKit/Localization.swift`. **Only a language with
+  small table, `L10n.pluralCategory` in `Sources/PlumeKit/Localization.swift`. **Only a language with
   more than two categories (Russian, Polish, Arabic…) needs a new case there**, plus the extra
   `.few` / `.many` entries in its `strings.json`.
 
@@ -69,7 +69,7 @@ picks between them:
 - Dates are not in the catalog. Month names and weekdays come from macOS's calendar for the
   language; the catalog only supplies the *shape* (`band.olderMonth`: `{month} {year}` vs
   `{year}年{month}`).
-- `"Pane"`, `GitHub`, `iCloud`, `Markdown` and `Finder`'s menu path are product names — translate
+- `"Plume"`, `GitHub`, `iCloud`, `Markdown` and `Finder`'s menu path are product names — translate
   the surrounding words, not these.
 - Tooltips are `name + key cap` ("Bold ⌘B"); the key cap is appended by the code.
 

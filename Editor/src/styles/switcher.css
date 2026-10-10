@@ -7,12 +7,12 @@
  *
  * WHERE IT LIVES. Frame 1c draws the switcher standalone, with its own radius, shadow and material,
  * and never shows it in context. Frame 2a *does* show the ⌘K panel in context — absolutely
- * positioned inside the pane, 54px from the top, horizontally centred, with the pane's material
+ * positioned inside the panel, 54px from the top, horizontally centred, with the panel's material
  * around it. The switcher is built the same way, for two reasons: decision 14 says every control
- * lives inside its own pane, and a second window would mean a second web view to keep warm.
+ * lives inside its own panel, and a second window would mean a second web view to keep warm.
  *
- * The consequence the design does not address: a pane sized to a three-line note is shorter than the
- * switcher. While the switcher is open the pane grows to fit it — top edge anchored, per rule 2 —
+ * The consequence the design does not address: a panel sized to a three-line note is shorter than the
+ * switcher. While the switcher is open the panel grows to fit it — top edge anchored, per rule 2 —
  * and returns to its content height on close. Recorded in the brief as a gap filled during the build.
  */
 
@@ -32,9 +32,9 @@
   /* Two ceilings, and the lower wins.
    *
    * `--overlay-panel-height` is the design one, shared with ⌘K so the two are the same rectangle.
-   * The other is the pane: an absolute cap says nothing about the window it has to fit in, so on a
-   * short pane the panel simply ran off the bottom edge — the last row cut in half by the pane's own
-   * rounded corner. The pane grows to make room (decision 40), but it cannot grow past the screen,
+   * The other is the panel: an absolute cap says nothing about the window it has to fit in, so on a
+   * short panel the panel simply ran off the bottom edge — the last row cut in half by the panel's own
+   * rounded corner. The panel grows to make room (decision 40), but it cannot grow past the screen,
    * and then this is what keeps the panel inside it. Its two tokens are the ones the placement
    * uses: the minimum offset from the top, and the room left under it. */
   max-height: min(
@@ -51,7 +51,7 @@
   overflow: hidden;
 }
 
-.pane:not([data-switcher]) .switcher {
+.plume:not([data-switcher]) .switcher {
   display: none;
 }
 
@@ -134,7 +134,7 @@
 }
 
 /* Below ~8 notes the bands disappear entirely — headers over a four-row list are chrome pretending
- * to be structure. The threshold lives in PaneKit (NoteOrdering.groupingThreshold). */
+ * to be structure. The threshold lives in PlumeKit (NoteOrdering.groupingThreshold). */
 .switcher[data-flat] .switcher__group {
   display: none;
 }
@@ -358,7 +358,7 @@ kbd {
 }
 
 
-/* Permanent removal. The only control in Pane with no undo behind it, so it reads as danger on
+/* Permanent removal. The only control in Plume with no undo behind it, so it reads as danger on
    hover rather than sitting there red and daring you — the row is a restore list first. */
 .switcher__action--danger:hover,
 .switcher__action--danger[data-pointer] {

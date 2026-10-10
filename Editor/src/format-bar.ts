@@ -5,7 +5,7 @@
  * inserts two pairs of asterisks into the document, exactly as typing them would. That is decision 5
  * holding at the UI layer — the buffer is the markdown, all the way up.
  *
- * The bar replaces the footer row rather than stacking below it (the pane's CSS does that), and its
+ * The bar replaces the footer row rather than stacking below it (the panel's CSS does that), and its
  * active state is a pressed fill, never the accent.
  */
 
@@ -31,7 +31,7 @@ interface Button {
   custom?: (view: EditorView) => void;
   svg?: string;
   /**
-   * Lezer node names that mean this button is on. Without these the pressed fill in `pane.css` has
+   * Lezer node names that mean this button is on. Without these the pressed fill in `plume.css` has
    * nothing to key off and can never render — which is exactly what the design audit found.
    */
   active?: string[];
@@ -46,7 +46,7 @@ interface Button {
 }
 
 /**
- * One wrapper for every drawn icon in the pane's chrome, so the grid, the stroke and the terminals
+ * One wrapper for every drawn icon in the panel's chrome, so the grid, the stroke and the terminals
  * are stated once instead of per icon.
  *
  * The icons are **Lucide** (ISC), inlined as path data rather than pulled in as a dependency — same
@@ -783,7 +783,7 @@ const BULLET_MARKER = /^[-*+]\s(?!\[[ xX]\]\s)/;
  * never two of those at once. Every command here used to test only for **its own** marker, so a
  * marker of a different kind was invisible to it and the new one went in front: `1. Hi` + Bulleted
  * gave `- 1. Hi`, `- Hi` + Numbered gave `1. - Hi`, and `1. Hi` + Task gave `- [ ] 1. Hi`. Each of
- * those is a list item whose *text* begins with what looks like a marker, so the pane drew both and
+ * those is a list item whose *text* begins with what looks like a marker, so the panel drew both and
  * the format bar lit both buttons — which is how it was reported, as the bullet button looking
  * pressed on a numbered list. The button was telling the truth about a document the commands had
  * corrupted.
@@ -837,7 +837,7 @@ function blankCaretLine(state: EditorState): Line | null {
  * A heading, a fenced code block and a horizontal rule all end at their own last line, so anything
  * written under one is a new block whatever it is. A paragraph does not: CommonMark's lazy
  * continuation pulls the following line into it, and a paragraph inside a list item or a quote does
- * the same from inside them. Measured against the pane's own renderer for all seven, because the
+ * the same from inside them. Measured against the panel's own renderer for all seven, because the
  * tree does not say this and pandoc disagrees with it — see `needsSeparation`.
  */
 const CONTINUING_BLOCKS = new Set(["Paragraph", "ListItem", "Blockquote"]);
@@ -870,7 +870,7 @@ function openList(
  *
  * Reported as an indent going weird: press ⏎ in a bullet list, which leaves `- `, then press
  * Numbered. The bytes are `- what\n1. ` and they are not wrong — pandoc reads them as a list and
- * then another list. **The pane's own parser does not**, and the pane is the thing drawing: an
+ * then another list. **The panel's own parser does not**, and the panel is the thing drawing: an
  * *empty* list item cannot interrupt a paragraph, so `1. ` is a lazy continuation of the paragraph
  * inside the item above and the line draws as literal text at the item's text column. Decision 108's
  * lazy continuation again, and the third construct it has turned up in.
@@ -1047,7 +1047,7 @@ function applyBlockMarker(
     // A marker-only line changing kind needs the same blank line a new one does.
     //
     // This is the reported case: ⏎ in a bullet list leaves `- `, and Numbered turned it into a line
-    // the pane drew as literal text at the item's text column. An empty item cannot interrupt the
+    // the panel drew as literal text at the item's text column. An empty item cannot interrupt the
     // paragraph above it, so `- what\n1. ` is a lazy continuation to this parser — while pandoc
     // reads it as two lists, which is what made the bytes look right. `needsSeparation` carries the
     // conditions and the measurements behind them.
@@ -1237,7 +1237,7 @@ export { setHeading };
 /**
  * The markdown formatting keys — and they are deliberately **not** rebindable.
  *
- * Pane's shortcuts come in two tiers and this is the second one. Tier 1 is Pane's own furniture —
+ * Plume's shortcuts come in two tiers and this is the second one. Tier 1 is Plume's own furniture —
  * ⌘K, ⌘P, ⌘N, ⌘, and the rest of the ⌘K rows — which is a matter of taste and machine, so it lives in
  * `Settings.shortcutActions`, appears in the Shortcuts tab, and has a Restore Defaults button for
  * when somebody paints themselves into a corner. Tier 2 is *markdown convention*: ⌘B has meant bold
@@ -1323,12 +1323,12 @@ export function mountFormatBar(
   // The menu itself is native, opened by Swift.
   //
   // It was a DOM popup, and a DOM popup cannot go where this one needs to go: the format bar sits at
-  // the bottom of the pane, so the list has to hang *below* it — past the window's own edge. Anything
+  // the bottom of the panel, so the list has to hang *below* it — past the window's own edge. Anything
   // rendered in the web view is clipped to the window, so opening upward over the note was the only
   // option and it covered the text you were about to format.
   //
   // An NSMenu also brings its dismissal rules with it, which is the other half of the problem: it
-  // closes on an outside click, on Escape, when the app deactivates, and when the pane is dismissed —
+  // closes on an outside click, on Escape, when the app deactivates, and when the panel is dismissed —
   // all of it handled by AppKit rather than by a pile of listeners here that would each have to be
   // remembered.
   heading.addEventListener("mousedown", (event) => {

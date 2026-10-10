@@ -1,6 +1,6 @@
 # Settings 窗口设计规范
 
-适用范围：`Sources/Pane/Settings/` 下全部五个 tab。令牌的**唯一来源**是 `SettingsForm.swift`，本文只解释它们；改数值请改代码，再同步这里。
+适用范围：`Sources/Plume/Settings/` 下全部五个 tab。令牌的**唯一来源**是 `SettingsForm.swift`，本文只解释它们；改数值请改代码，再同步这里。
 
 ## 1. 结构：页 → 卡片 → 行
 

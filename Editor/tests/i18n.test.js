@@ -14,18 +14,18 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 export async function run(view, bar, doc) {
   const failures = []; let checked = 0;
   const check = (name, want, got) => { checked++; if (want !== got) failures.push({ case: name, want: String(want), got: String(got) }); };
-  const host = window.paneHost;
+  const host = window.plumeHost;
   const txt = (sel) => (doc.querySelector(sel)?.textContent ?? "").trim();
   const aria = (sel) => doc.querySelector(sel)?.getAttribute("aria-label") ?? "";
 
   host.loadNote("a.md", "", 0, false);
   check("en: footer", "0 words", txt("#word-count"));
-  check("en: title", "Untitled", txt("#pane-title"));
+  check("en: title", "Untitled", txt("#plume-title"));
 
   host.applySettings({ language: "zh-Hans" });
   await sleep(50);
   check("zh: footer", "0 个词", txt("#word-count"));
-  check("zh: title", "无标题", txt("#pane-title"));
+  check("zh: title", "无标题", txt("#plume-title"));
   check("zh: static aria", "格式", aria("#format-bar"));
   check("zh: actions placeholder", "搜索操作…", doc.getElementById("actions-search").placeholder);
   check("zh: new-note tip", "新建笔记", aria("#new-note").replace(/\s*⌘.*/, ""));

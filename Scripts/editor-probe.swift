@@ -5,9 +5,9 @@ import WebKit
  The editor's test harness: the real bundle, in a real WKWebView, driven from a JS file.
 
  Why not a browser or a mocked tree. The browser harness cannot measure layout — serving
- `Editor/dist` over a static server renders the pane about 2px tall, so every height is garbage —
+ `Editor/dist` over a static server renders the panel about 2px tall, so every height is garbage —
  and a mocked syntax tree would not catch the bugs these tests exist for, which are all about what
- the *real* parser does with a real selection. So: a real window, offscreen, at the pane's own
+ the *real* parser does with a real selection. So: a real window, offscreen, at the panel's own
  width.
 
  The JS file must export `run(view, bar, doc)` and return `{ checked, failures }`. Exit status is
@@ -19,10 +19,10 @@ guard arguments.count >= 3 else {
     FileHandle.standardError.write(Data("usage: editor-probe <index.html> <test.js> [width]\n".utf8))
     exit(2)
 }
-// Optional, because one suite's subject is the pane being *narrow*: the ⌘K panel drops its shortcut
-// chips below 420 so the labels fit, and that rule reads the viewport — which is the pane. Every
+// Optional, because one suite's subject is the panel being *narrow*: the ⌘K panel drops its shortcut
+// chips below 420 so the labels fit, and that rule reads the viewport — which is the panel. Every
 // other suite wants the width users have and leaves this off.
-let paneWidth = arguments.count >= 4 ? Double(arguments[3]) ?? 460 : 460
+let plumeWidth = arguments.count >= 4 ? Double(arguments[3]) ?? 460 : 460
 let html = URL(fileURLWithPath: arguments[1])
 let testFile = URL(fileURLWithPath: arguments[2])
 guard let testSource = try? String(contentsOf: testFile, encoding: .utf8) else {
@@ -33,10 +33,10 @@ guard let testSource = try? String(contentsOf: testFile, encoding: .utf8) else {
 let app = NSApplication.shared
 app.setActivationPolicy(.accessory)
 
-// Offscreen, and 460 wide by default because that is `PanePanel.defaultWidth` — layout has to match
-// the pane.
+// Offscreen, and 460 wide by default because that is `PlumePanel.defaultWidth` — layout has to match
+// the panel.
 let window = NSWindow(
-    contentRect: NSRect(x: 0, y: 0, width: paneWidth, height: 600),
+    contentRect: NSRect(x: 0, y: 0, width: plumeWidth, height: 600),
     styleMask: [.borderless], backing: .buffered, defer: false)
 let web = WKWebView(frame: window.contentLayoutRect)
 window.contentView = web

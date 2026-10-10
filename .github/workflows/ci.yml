@@ -62,7 +62,7 @@ jobs:
       # `swift test` cannot run here for the same reason it cannot run on the dev machine: neither
       # XCTest nor swift-testing ships with the Command Line Tools. The suite is an ordinary
       # executable target, which is what makes it runnable anywhere `swift build` is.
-      - name: Test PaneKit
+      - name: Test PlumeKit
         run: Scripts/test.sh
 
       # The four editor suites, all on the same `editor-probe`: a real WKWebView in a real NSWindow.
@@ -84,21 +84,21 @@ jobs:
 
       # Assembles the real .app, so a break in the bundling script, the Info.plist substitution or
       # the ad-hoc signature fails the build rather than waiting for a release.
-      - name: Build Pane.app
+      - name: Build Plume.app
         run: Scripts/build-app.sh
 
       - name: Verify the bundle
         run: |
           set -euo pipefail
-          APP=build/Pane.app
-          test -x "$APP/Contents/MacOS/Pane"
-          test "$(plutil -extract CFBundleIdentifier raw "$APP/Contents/Info.plist")" = "com.tiylabs.pane"
+          APP=build/Plume.app
+          test -x "$APP/Contents/MacOS/Plume"
+          test "$(plutil -extract CFBundleIdentifier raw "$APP/Contents/Info.plist")" = "com.tiylabs.plume"
           test -f "$APP/Contents/Resources/Editor/index.html"
           test -f "$APP/Contents/Resources/AppIcon.icns"
           test -f "$APP/Contents/Resources/MenuBar@2x.png"
           codesign --verify --deep --strict "$APP"
 
-          # Decision 9 is a promise the build can keep on its own: Pane requests no privacy
+          # Decision 9 is a promise the build can keep on its own: Plume requests no privacy
           # permissions at all, so an NS*UsageDescription key appearing in the bundle means one of
           # them broke. Cheaper to catch here than in a review.
           if plutil -p "$APP/Contents/Info.plist" | grep -q "UsageDescription"; then
@@ -106,11 +106,11 @@ jobs:
             exit 1
           fi
 
-          # And decision 99 the same way. A release bundle carrying PaneScratchBuild would resolve
-          # its Application Support to "Pane (Debug)" and default its vault to ~/Pane-scratch, so
+          # And decision 99 the same way. A release bundle carrying PlumeScratchBuild would resolve
+          # its Application Support to "Plume (Debug)" and default its vault to ~/Plume-scratch, so
           # every installer would open an empty folder on first run and their notes would look gone.
           # This step builds with the release default, so the key must be absent.
-          if plutil -p "$APP/Contents/Info.plist" | grep -q "PaneScratchBuild"; then
+          if plutil -p "$APP/Contents/Info.plist" | grep -q "PlumeScratchBuild"; then
             echo "error: a release bundle is stamped as a scratch build — see decision 99" >&2
             exit 1
           fi

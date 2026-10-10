@@ -1,6 +1,6 @@
-# Welcome to Pane
+# Welcome to Plume
 
-This is a note. Press **⌃⌥Space** to put Pane away. Press it again and Pane comes right back.
+This is a note. Press **⌃⌥Space** to put Plume away. Press it again and Plume comes right back.
 
 ## Start with three keys
 
@@ -8,7 +8,7 @@ This is a note. Press **⌃⌥Space** to put Pane away. Press it again and Pane 
 - **⌘P** Find a note
 - **⌘K** Everything else
 
-Pane starts at a fixed size. Press **⇧⌘/** if you'd rather have it grow with your notes.
+Plume starts at a fixed size. Press **⇧⌘/** if you'd rather have it grow with your notes.
 
 ## Just write
 
@@ -27,4 +27,4 @@ You can find them anytime with **⌘K → Reveal in Finder**.
 
 That's enough to get started.
 
-Feel free to delete this note. Pane won't bring it back.
+Feel free to delete this note. Plume won't bring it back.

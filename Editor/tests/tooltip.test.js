@@ -22,7 +22,7 @@ export async function run(view, bar, doc) {
     if (!ok) failures.push({ case: name, want: String(want), got: String(got) });
   }
 
-  const tip = () => doc.querySelector(".pane__tip");
+  const tip = () => doc.querySelector(".plume__tip");
   const shown = () => {
     const el = tip();
     return !!el && !el.hidden;
@@ -91,7 +91,7 @@ export async function run(view, bar, doc) {
   //
   // Reported from the build, and the report is the reason this section replaced its opposite. The
   // first version kept a warm window — show one bubble and the next control is instant, which is what
-  // AppKit, Windows and Qt do and which reads as correct in the abstract. In the pane it meant that
+  // AppKit, Windows and Qt do and which reads as correct in the abstract. In the panel it meant that
   // moving from ⌘P to ⌘K was indistinguishable from having no delay, so the delay could not be felt
   // in the one place people actually read chrome: along a row, one control after another.
   //
@@ -127,24 +127,24 @@ export async function run(view, bar, doc) {
 
   // ---- Named from Swift's pointer alone, with no DOM mouse events -------------------------------
   //
-  // The path that matters most and was dead until decision 120. In Pane's real configuration the page
+  // The path that matters most and was dead until decision 120. In Plume's real configuration the page
   // receives *no* mouse events — an accessory app's non-activating panel that has not been clicked
   // (decision 107 measured zero against 22 in a key window) — so every case above this one, and every
-  // tooltip in the shipped app, only worked after the pane had been clicked. Which is the state
-  // nobody tests, because not having to click the pane is the point of the product.
+  // tooltip in the shipped app, only worked after the panel had been clicked. Which is the state
+  // nobody tests, because not having to click the panel is the point of the product.
   //
   // So this case sends nothing but the coordinates Swift sends, and asserts the bubble anyway.
   {
     await reset();
     // Swift raises `setHover` before it sends a position, and the order is load-bearing: dimmed
     // chrome is `pointer-events: none` (decision 41), so `elementFromPoint` returns the *container*
-    // and finds no control at all until the pane is marked hovered. Mirror that here.
-    window.paneHost.setHover(true);
+    // and finds no control at all until the panel is marked hovered. Mirror that here.
+    window.plumeHost.setHover(true);
     const box = second.getBoundingClientRect();
     const cx = box.left + box.width / 2;
     const cy = box.top + box.height / 2;
 
-    window.paneHost.setPointer(cx, cy);
+    window.plumeHost.setPointer(cx, cy);
     check(
       "a control is not named the instant Swift's pointer arrives on it",
       "hidden",
@@ -186,7 +186,7 @@ export async function run(view, bar, doc) {
     );
 
     // Moving off every control is the only "left" signal there is — no mouseout ever arrives.
-    window.paneHost.setPointer(4, 4);
+    window.plumeHost.setPointer(4, 4);
     check(
       "and the mark goes with the pointer",
       "nothing marked",
@@ -199,14 +199,14 @@ export async function run(view, bar, doc) {
       shown() ? "shown" : "hidden",
       !shown()
     );
-    window.paneHost.setHover(false);
+    window.plumeHost.setHover(false);
   }
 
   // ---- Issue 7: a bubble is never under the thing it names, and it keeps its key ----------------
   //
   // Decision 182. Reported: resting on a row's pin or ✕ in ⌘P showed no bubble — it was painted
   // under the list — and over a toast the title bar's bubbles were cut off. And the rows' bubbles
-  // said "Pin" and "Delete" with no key. Driven the way the pane really is, through Swift's
+  // said "Pin" and "Delete" with no key. Driven the way the panel really is, through Swift's
   // `setPointer`, and asserted on paint order: the bubble's own centre is hit-tested with its
   // `pointer-events` let through for the one read, so what comes back is whatever is drawn on top.
   {
@@ -225,13 +225,13 @@ export async function run(view, bar, doc) {
       return hit && (hit === el || el.contains(hit)) ? "bubble" : (hit?.className || hit?.tagName || "nothing");
     };
     const restOn = async (el) => {
-      window.paneHost.setHover(true);
-      window.paneHost.setPointer(...centre(el));
+      window.plumeHost.setHover(true);
+      window.plumeHost.setPointer(...centre(el));
       await sleep(DELAY * 1.3);
     };
     const leave = async () => {
-      window.paneHost.setPointer(4, 4);
-      window.paneHost.setHover(false);
+      window.plumeHost.setPointer(4, 4);
+      window.plumeHost.setHover(false);
       await sleep(60);
     };
     const notes = Array.from({ length: 6 }, (_, i) => ({
@@ -244,7 +244,7 @@ export async function run(view, bar, doc) {
 
     await leave();
     doc.getElementById("browse").click();
-    window.paneHost.showNotes(notes, notes.length, "");
+    window.plumeHost.showNotes(notes, notes.length, "");
     for (const [what, selector, want] of [
       ["pin", "[data-pin]", "Pin ⌘⏎"],
       ["✕", "[data-delete]", "Delete ⌃X"],
@@ -260,8 +260,8 @@ export async function run(view, bar, doc) {
     {
       const button = doc.querySelector(".switcher__row [data-delete]");
       const was = button.dataset.tip;
-      window.paneHost.setHover(true);
-      window.paneHost.setPointer(...centre(button));
+      window.plumeHost.setHover(true);
+      window.plumeHost.setPointer(...centre(button));
       button.dataset.tip = "Delete ⌥X";
       await sleep(DELAY * 1.3);
       check("(182) a row's bubble says what its label is when the delay ends", "Delete ⌥X", text(), squash(text()) === squash("Delete ⌥X"));
@@ -276,7 +276,7 @@ export async function run(view, bar, doc) {
     actionsSearch.value = "Recently Deleted";
     actionsSearch.dispatchEvent(new Event("input", { bubbles: true }));
     actionsSearch.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
-    window.paneHost.showDeleted(notes.slice(0, 3));
+    window.plumeHost.showDeleted(notes.slice(0, 3));
     const trash = doc.querySelector(".switcher__row [data-forget]");
     await restOn(trash);
     check("(182) Recently Deleted's trash: the bubble is drawn over the list", "bubble", onTop(), onTop() === "bubble");
@@ -284,7 +284,7 @@ export async function run(view, bar, doc) {
     await leave();
     doc.getElementById("switcher-search")?.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
 
-    window.paneHost.showToast("A long receipt that runs the whole width of the pane, under the title bar's buttons", 5000);
+    window.plumeHost.showToast("A long receipt that runs the whole width of the panel, under the title bar's buttons", 5000);
     await restOn(doc.getElementById("browse"));
     check("(182) a title-bar bubble is drawn over a toast", "bubble", onTop(), onTop() === "bubble");
     await leave();
@@ -293,11 +293,11 @@ export async function run(view, bar, doc) {
   // ---- The transient surfaces are one family --------------------------------------------------
   //
   // A guard on two declarations rather than on behaviour, and deliberately so. Three things in the
-  // pane appear, say one line and leave — this bubble, the toast, and the auto-size pill — and the
+  // panel appear, say one line and leave — this bubble, the toast, and the auto-size pill — and the
   // shape is what says they are the same kind of thing. The pill is a native `NSPanel` below the
-  // pane (a web view cannot paint outside its window) and is a capsule by construction: 13pt on a
+  // panel (a web view cannot paint outside its window) and is a capsule by construction: 13pt on a
   // 26pt height. The other two drifted to 7px and a stray 8px literal, which put them in the
-  // *rectangle* family — the pane, the overlays, a ⌘K row, all things you can put a pointer into.
+  // *rectangle* family — the panel, the overlays, a ⌘K row, all things you can put a pointer into.
   //
   // Nothing here can see a corner. The probe's window is never key, so `getComputedStyle` is stale,
   // and a radius is not geometry this harness can measure. So what is pinned is the declaration,
@@ -306,7 +306,7 @@ export async function run(view, bar, doc) {
   {
     const rules = [...doc.styleSheets]
       .flatMap((sheet) => { try { return [...sheet.cssRules]; } catch { return []; } });
-    for (const selector of [".pane__tip", ".pane__toast"]) {
+    for (const selector of [".plume__tip", ".plume__toast"]) {
       const rule = rules.find((r) => r.selectorText === selector);
       check(`${selector} is declared`, "present", rule ? "present" : "missing", !!rule);
       check(

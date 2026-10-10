@@ -7,7 +7,7 @@ import { EditorState, EditorSelection } from "@codemirror/state";
 import { ensureSyntaxTree } from "@codemirror/language";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { lineContext, type KeyEdit, type LineContext } from "../../src/keyboard/context";
-import { paneDialect } from "../../src/dialect";
+import { plumeDialect } from "../../src/dialect";
 
 export interface Case {
   name: string;
@@ -27,7 +27,7 @@ export function stateFor(doc: string): EditorState {
     doc: text,
     selection: EditorSelection.cursor(caret),
     // The app's parser, rules and all (158): the tables must read what the editor reads.
-    extensions: [markdown({ base: markdownLanguage, extensions: paneDialect })],
+    extensions: [markdown({ base: markdownLanguage, extensions: plumeDialect })],
   });
   ensureSyntaxTree(state, state.doc.length, 5000);
   return state;

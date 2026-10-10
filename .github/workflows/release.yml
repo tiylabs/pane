@@ -16,7 +16,7 @@ permissions:
   contents: write
 
 jobs:
-  # PaneKit (Swift) and the editor (node + the WKWebView probe) share nothing, so they are separate
+  # PlumeKit (Swift) and the editor (node + the WKWebView probe) share nothing, so they are separate
   # jobs and run alongside each other and the builds.
   test-kit:
     if: github.event_name == 'push'
@@ -26,7 +26,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Test PaneKit
+      - name: Test PlumeKit
         run: Scripts/test.sh
 
   test-editor:
@@ -66,7 +66,7 @@ jobs:
       - name: Upload the tested editor bundle
         uses: actions/upload-artifact@v4
         with:
-          name: pane-editor
+          name: plume-editor
           path: Editor/dist/
           if-no-files-found: error
           retention-days: 1
@@ -85,22 +85,22 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Build Pane (${{ matrix.arch }})
+      - name: Build Plume (${{ matrix.arch }})
         env:
           ARCH: ${{ matrix.arch }}
         run: |
           set -euo pipefail
-          swift build -c release --arch "$ARCH" --product Pane
-          BIN="$(swift build -c release --arch "$ARCH" --product Pane --show-bin-path)/Pane"
+          swift build -c release --arch "$ARCH" --product Plume
+          BIN="$(swift build -c release --arch "$ARCH" --product Plume --show-bin-path)/Plume"
           lipo "$BIN" -verify_arch "$ARCH"
           mkdir -p "build/$ARCH"
-          cp "$BIN" "build/$ARCH/Pane"
+          cp "$BIN" "build/$ARCH/Plume"
 
       - name: Upload the architecture binary
         uses: actions/upload-artifact@v4
         with:
-          name: pane-${{ matrix.arch }}
-          path: build/${{ matrix.arch }}/Pane
+          name: plume-${{ matrix.arch }}
+          path: build/${{ matrix.arch }}/Plume
           if-no-files-found: error
           retention-days: 1
 
@@ -117,29 +117,29 @@ jobs:
       - name: Download the tested editor bundle
         uses: actions/download-artifact@v4
         with:
-          name: pane-editor
+          name: plume-editor
           path: Editor/dist
 
       - name: Download the arm64 binary
         uses: actions/download-artifact@v4
         with:
-          name: pane-arm64
+          name: plume-arm64
           path: build/arm64
 
       - name: Download the x86_64 binary
         uses: actions/download-artifact@v4
         with:
-          name: pane-x86_64
+          name: plume-x86_64
           path: build/x86_64
 
       - name: Merge the universal binary
         run: |
           set -euo pipefail
-          lipo -create build/arm64/Pane build/x86_64/Pane -output build/Pane
-          lipo build/Pane -verify_arch arm64
-          lipo build/Pane -verify_arch x86_64
+          lipo -create build/arm64/Plume build/x86_64/Plume -output build/Plume
+          lipo build/Plume -verify_arch arm64
+          lipo build/Plume -verify_arch x86_64
           # Artifact downloads do not preserve executable permissions.
-          chmod +x build/Pane
+          chmod +x build/Plume
 
       - name: Version from the tag
         id: version
@@ -147,7 +147,7 @@ jobs:
 
       # The certificate lives in a throwaway keychain that exists only for this job. Everything
       # below fails closed: a release that cannot be signed must not fall back to the ad-hoc
-      # signature and ship, which is what an unset PANE_SIGN_IDENTITY would otherwise do.
+      # signature and ship, which is what an unset PLUME_SIGN_IDENTITY would otherwise do.
       - name: Import the Developer ID certificate
         env:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
@@ -165,7 +165,7 @@ jobs:
           done
 
           CERT_PATH="$RUNNER_TEMP/signing-certificate.p12"
-          KEYCHAIN_PATH="$RUNNER_TEMP/pane-signing.keychain-db"
+          KEYCHAIN_PATH="$RUNNER_TEMP/plume-signing.keychain-db"
           KEYCHAIN_PASSWORD="$(uuidgen)"
           echo "::add-mask::$KEYCHAIN_PASSWORD"
 
@@ -189,21 +189,21 @@ jobs:
           fi
           echo "Signing identity: $IDENTITY"
           echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> "$GITHUB_ENV"
-          echo "PANE_SIGN_IDENTITY=$IDENTITY" >> "$GITHUB_ENV"
+          echo "PLUME_SIGN_IDENTITY=$IDENTITY" >> "$GITHUB_ENV"
 
-      - name: Assemble Pane.app (universal, Developer ID signed)
+      - name: Assemble Plume.app (universal, Developer ID signed)
         env:
-          PANE_VERSION: ${{ steps.version.outputs.version }}
-        run: Scripts/build-app.sh --skip-editor --binary build/Pane
+          PLUME_VERSION: ${{ steps.version.outputs.version }}
+        run: Scripts/build-app.sh --skip-editor --binary build/Plume
 
       # Notarize the app before it goes into the image, so the ticket is stapled to the bundle the
       # user drags out and it opens offline. The image is notarized again below.
-      - name: Notarize Pane.app
+      - name: Notarize Plume.app
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: Scripts/notarize.sh build/Pane.app
+        run: Scripts/notarize.sh build/Plume.app
 
       - name: Package
         id: package
@@ -214,9 +214,9 @@ jobs:
         run: |
           set -euo pipefail
           Scripts/make-dmg.sh
-          NAME="Pane-${{ steps.version.outputs.version }}.dmg"
+          NAME="Plume-${{ steps.version.outputs.version }}.dmg"
           test -f "build/$NAME"
-          codesign --force --timestamp --sign "$PANE_SIGN_IDENTITY" "build/$NAME"
+          codesign --force --timestamp --sign "$PLUME_SIGN_IDENTITY" "build/$NAME"
           codesign --verify --verbose=2 "build/$NAME"
           Scripts/notarize.sh "build/$NAME"
           echo "name=$NAME" >> "$GITHUB_OUTPUT"
@@ -233,25 +233,25 @@ jobs:
           hdiutil attach "build/${{ steps.package.outputs.name }}" -nobrowse -readonly -mountpoint /tmp/verify
           trap 'hdiutil detach /tmp/verify -quiet || true' EXIT
 
-          codesign --verify --deep --strict /tmp/verify/Pane.app
+          codesign --verify --deep --strict /tmp/verify/Plume.app
           # Signed by a Developer ID with the hardened runtime — not the ad-hoc fallback, which
           # passes `--verify` just as happily.
-          SIGINFO="$(codesign -dvv /tmp/verify/Pane.app 2>&1)"
+          SIGINFO="$(codesign -dvv /tmp/verify/Plume.app 2>&1)"
           echo "$SIGINFO"
           grep -q "Authority=Developer ID Application" <<<"$SIGINFO"
           grep -q "TeamIdentifier=$APPLE_TEAM_ID" <<<"$SIGINFO"
           grep -Eq "flags=0x[0-9a-f]+\(.*runtime" <<<"$SIGINFO"
-          test "$(plutil -extract CFBundleIdentifier raw /tmp/verify/Pane.app/Contents/Info.plist)" = "com.tiylabs.pane"
+          test "$(plutil -extract CFBundleIdentifier raw /tmp/verify/Plume.app/Contents/Info.plist)" = "com.tiylabs.plume"
           # What Gatekeeper itself says, for the app and for the image, and that the ticket is
           # stapled so the first launch does not need the network.
-          xcrun stapler validate /tmp/verify/Pane.app
-          spctl --assess --type execute --verbose=4 /tmp/verify/Pane.app
+          xcrun stapler validate /tmp/verify/Plume.app
+          spctl --assess --type execute --verbose=4 /tmp/verify/Plume.app
           xcrun stapler validate "build/${{ steps.package.outputs.name }}"
           spctl --assess --type open --context context:primary-signature --verbose=4 "build/${{ steps.package.outputs.name }}"
           # Universal, or the release silently drops every Intel Mac.
-          lipo -archs /tmp/verify/Pane.app/Contents/MacOS/Pane | tee /dev/stderr | grep -q "x86_64"
-          lipo -archs /tmp/verify/Pane.app/Contents/MacOS/Pane | grep -q "arm64"
-          test "$(plutil -extract CFBundleShortVersionString raw /tmp/verify/Pane.app/Contents/Info.plist)" \
+          lipo -archs /tmp/verify/Plume.app/Contents/MacOS/Plume | tee /dev/stderr | grep -q "x86_64"
+          lipo -archs /tmp/verify/Plume.app/Contents/MacOS/Plume | grep -q "arm64"
+          test "$(plutil -extract CFBundleShortVersionString raw /tmp/verify/Plume.app/Contents/Info.plist)" \
             = "${{ steps.version.outputs.version }}"
           # The alias is the whole reason this is an image rather than a zip.
           test "$(readlink /tmp/verify/Applications)" = "/Applications"
@@ -311,7 +311,7 @@ jobs:
       - name: Summary
         run: |
           {
-            echo "### Pane ${{ steps.version.outputs.version }}"
+            echo "### Plume ${{ steps.version.outputs.version }}"
             echo
             echo "Release created **as a prerelease** — review the notes, then promote it to a full release."
             echo
@@ -321,7 +321,7 @@ jobs:
             echo '```'
             echo
             echo "Signed with Developer ID and notarized. Promoting the prerelease bumps"
-            echo "\`Casks/pane.rb\` in \`tiylabs/homebrew-tap\` automatically."
+            echo "\`Casks/plume.rb\` in \`tiylabs/homebrew-tap\` automatically."
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Remove the signing keychain
@@ -347,7 +347,7 @@ jobs:
         run: |
           set -euo pipefail
           VERSION="${TAG#v}"
-          DMG="Pane-${VERSION}.dmg"
+          DMG="Plume-${VERSION}.dmg"
           gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern "$DMG" --dir .
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
           echo "SHA256=$(sha256sum "$DMG" | awk '{print $1}')" >> "$GITHUB_ENV"
@@ -358,9 +358,9 @@ jobs:
           sed -E \
             -e "s/^(  version )\".*\"/\1\"$VERSION\"/" \
             -e "s/^(  sha256 )\".*\"/\1\"$SHA256\"/" \
-            packaging/pane.rb > pane.rb
-          grep -q "version \"$VERSION\"" pane.rb
-          grep -q "sha256 \"$SHA256\"" pane.rb
+            packaging/plume.rb > plume.rb
+          grep -q "version \"$VERSION\"" plume.rb
+          grep -q "sha256 \"$SHA256\"" plume.rb
 
       - name: Push to tiylabs/homebrew-tap
         env:
@@ -373,14 +373,14 @@ jobs:
           fi
           git clone --depth 1 "https://x-access-token:${PAT_TOKEN}@github.com/tiylabs/homebrew-tap.git" tap
           mkdir -p tap/Casks
-          cp pane.rb tap/Casks/pane.rb
+          cp plume.rb tap/Casks/plume.rb
           cd tap
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add Casks/pane.rb
+          git add Casks/plume.rb
           if git diff --cached --quiet; then
             echo "Cask already up to date."
             exit 0
           fi
-          git commit -m "Update Pane to $VERSION"
+          git commit -m "Update Plume to $VERSION"
           git push

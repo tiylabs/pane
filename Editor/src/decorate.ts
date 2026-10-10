@@ -21,35 +21,35 @@ import type { Reveal } from "./reveal";
 /** Block constructs are line decorations: a mark wraps an inline span and takes no margin or padding,
  * so heading sizes and list indents did nothing as marks. */
 const BLOCK_LINE: Record<string, string> = {
-  ATXHeading1: "pane-line-h1",
-  ATXHeading2: "pane-line-h2",
-  ATXHeading3: "pane-line-h3",
-  ATXHeading4: "pane-line-h3",
-  ATXHeading5: "pane-line-h3",
-  ATXHeading6: "pane-line-h3",
-  SetextHeading1: "pane-line-h1",
-  SetextHeading2: "pane-line-h2",
-  FencedCode: "pane-line-code",
-  CodeBlock: "pane-line-code",
-  Blockquote: "pane-line-quote",
+  ATXHeading1: "plume-line-h1",
+  ATXHeading2: "plume-line-h2",
+  ATXHeading3: "plume-line-h3",
+  ATXHeading4: "plume-line-h3",
+  ATXHeading5: "plume-line-h3",
+  ATXHeading6: "plume-line-h3",
+  SetextHeading1: "plume-line-h1",
+  SetextHeading2: "plume-line-h2",
+  FencedCode: "plume-line-code",
+  CodeBlock: "plume-line-code",
+  Blockquote: "plume-line-quote",
 };
 
 const INLINE_STYLE: Record<string, string> = {
-  StrongEmphasis: "pane-strong",
-  Emphasis: "pane-em",
-  Strikethrough: "pane-strike",
-  InlineCode: "pane-code",
-  Link: "pane-link",
+  StrongEmphasis: "plume-strong",
+  Emphasis: "plume-em",
+  Strikethrough: "plume-strike",
+  InlineCode: "plume-code",
+  Link: "plume-link",
   // CommonMark's `<https://x.com>`. A separate node type from `Link`, and leaving it out meant it
   // had no owner in `inlineRanges` — so its `<` and `>` fell back to the line rule, and its `URL`
   // was hidden as a marker with nothing left to show. Decision 121.
-  Autolink: "pane-link",
+  Autolink: "plume-link",
   // A bare `https://x.com`, `www.x.com` or `a@b.com`. GFM parses these as a `URL` with no
   // construct around it at all, so this entry is what gives them the accent — and, because
   // `INLINE_STYLE` is what `inlineRanges` is built from, what makes them reveal under the caret
   // like every other inline construct. Guarded below: a `[label](target)` link's `URL` is a
   // marker, not content, and must not match here.
-  URL: "pane-link",
+  URL: "plume-link",
 };
 
 /**
@@ -71,27 +71,27 @@ const MARKER_NODES = new Set([
 const hide = Decoration.replace({});
 
 /** A rule spans its whole line, so it is drawn on the line box rather than on the three characters. */
-const ruleLine = Decoration.line({ class: "pane-rule" });
-const blankLine = Decoration.line({ class: "pane-line-blank" });
+const ruleLine = Decoration.line({ class: "plume-rule" });
+const blankLine = Decoration.line({ class: "plume-line-blank" });
 
 /** The gap above a block the user did not separate with a blank line — decision 55. Where a blank
  * line exists it is already the gap. */
-const gapLine = Decoration.line({ class: "pane-line-gap" });
-const headingSpaceLine = Decoration.line({ class: "pane-line-heading-space" });
-const fenceLine = Decoration.line({ class: "pane-line-fence" });
+const gapLine = Decoration.line({ class: "plume-line-gap" });
+const headingSpaceLine = Decoration.line({ class: "plume-line-heading-space" });
+const fenceLine = Decoration.line({ class: "plume-line-fence" });
 
-const syntaxMark = Decoration.mark({ class: "pane-syntax" });
+const syntaxMark = Decoration.mark({ class: "plume-syntax" });
 
 /** The text of a ticked task item. */
-const doneTaskText = Decoration.mark({ class: "pane-task-done-text" });
+const doneTaskText = Decoration.mark({ class: "plume-task-done-text" });
 
 /** `==highlight==` and `<u>` have no parser node, so they are matched on the line's text and checked
  * against the tree — a `==` inside code is code (decision 61). */
 export const TEXT_CONSTRUCTS: { pattern: RegExp; open: number; close: number; class: string }[] = [
   // No space just inside the delimiters, the same rule `**bold**` follows — without it a line like
   // "a total of == two == equals" was a highlight containing the word "two".
-  { pattern: /==(?!\s)([^=\n]+?)(?<!\s)==/g, open: 2, close: 2, class: "pane-mark" },
-  { pattern: /<u>(.+?)<\/u>/g, open: 3, close: 4, class: "pane-underline" },
+  { pattern: /==(?!\s)([^=\n]+?)(?<!\s)==/g, open: 2, close: 2, class: "plume-mark" },
+  { pattern: /<u>(.+?)<\/u>/g, open: 3, close: 4, class: "plume-underline" },
 ];
 
 /**
@@ -99,7 +99,7 @@ export const TEXT_CONSTRUCTS: { pattern: RegExp; open: number; close: number; cl
  * a whole unrevealed `**bold words**` as one atom sent every click and ↑/↓ into it to an edge (168).
  */
 export const TEXT_STYLE_CLASSES: ReadonlySet<string> = new Set([
-  ...Object.values(INLINE_STYLE), ...TEXT_CONSTRUCTS.map((c) => c.class), "pane-task-done-text",
+  ...Object.values(INLINE_STYLE), ...TEXT_CONSTRUCTS.map((c) => c.class), "plume-task-done-text",
 ]);
 
 /** Is this offset inside code, where a `==` is two equals signs and nothing more? */
@@ -124,7 +124,7 @@ class PendingMarkWidget extends WidgetType {
   }
   toDOM() {
     const span = document.createElement("span");
-    span.className = "pane-syntax pane-pending-mark";
+    span.className = "plume-syntax plume-pending-mark";
     span.textContent = this.text;
     return span;
   }
@@ -134,9 +134,9 @@ class PendingMarkWidget extends WidgetType {
 }
 
 /** A rendered ordered-list number: `1.` as the reader sees it, not as raw syntax. */
-const numberMark = Decoration.mark({ class: "pane-list-number" });
+const numberMark = Decoration.mark({ class: "plume-list-number" });
 /** The space after a rendered number, in the same gap box the raw marker's space takes (145). */
-const numberGap = Decoration.mark({ class: "pane-list-gap" });
+const numberGap = Decoration.mark({ class: "plume-list-gap" });
 
 /** A rendered task checkbox standing in for the literal `[ ]` or `[x]` in the buffer. */
 class TaskWidget extends WidgetType {
@@ -157,15 +157,15 @@ class TaskWidget extends WidgetType {
 
   toDOM() {
     const box = document.createElement("span");
-    box.className = `pane-task ${this.done ? "pane-task--done" : "pane-task--todo"}${
-      this.inFlow ? " pane-task--inflow" : ""
+    box.className = `plume-task ${this.done ? "plume-task--done" : "plume-task--todo"}${
+      this.inFlow ? " plume-task--inflow" : ""
     }`;
     // Done is a **fill**, drawn in CSS, not a tick glyph. A ✓ set in the body font is a character
     // with the body font's own optical centre and side bearings, so it never sits square in a box
     // — and it has to be re-tuned every time the box size changes, which is decision 82's class.
     // A filled square inside the outline is the same shape at every size and needs no metrics.
     box.textContent = "";
-    box.dataset.paneTask = String(this.pos);
+    box.dataset.plumeTask = String(this.pos);
     box.setAttribute("role", "checkbox");
     box.setAttribute("aria-checked", String(this.done));
     return box;
@@ -192,7 +192,7 @@ class BulletWidget extends WidgetType {
     // Drawn in CSS, not a character: `•` `◦` `▪` paint 3/3/7px of ink and no multiplier fixes all three
     // (decision 122). A real element, so the shape can be measured.
     const dot = document.createElement("span");
-    dot.className = `pane-list-marker pane-bullet-${Math.min(this.depth, 3)}`;
+    dot.className = `plume-list-marker plume-bullet-${Math.min(this.depth, 3)}`;
     // A real element rather than a `::before`, so the shape can be measured. A pseudo-element has
     // no rect any test can read, and the first version of this centring painted both dots a
     // half-line low with the whole geometry suite green — it could see the marker's box and not
@@ -281,11 +281,11 @@ function blockLines(node: SyntaxNodeRef, w: Walk): void {
     const last = w.doc.lineAt(node.to).number;
     for (let n = first; n <= last; n++) {
       w.decorations.push(deco.range(w.doc.line(n).from));
-      if (blockClass === "pane-line-code") w.codeLines.add(n);
+      if (blockClass === "plume-line-code") w.codeLines.add(n);
     }
     // A heading opens a section, so it gets more room above it than a block does — but not as the
     // note's first line, where there is nothing above to be separated from (166).
-    if (blockClass.startsWith("pane-line-h") && first > 1) {
+    if (blockClass.startsWith("plume-line-h") && first > 1) {
       w.decorations.push(headingSpaceLine.range(w.doc.line(first).from));
     }
 
@@ -323,7 +323,7 @@ function ownsMarkerSlot(w: Walk, from: number): boolean {
 function listItem(node: SyntaxNodeRef, w: Walk): void {
   // **A line is indented to the level of the marker it draws** — decision 154. An item whose marker
   // starts mid-line does not get the slot, so `listMark` leaves that marker as literal text; taking
-  // its depth as well stamped a second `pane-line-li-N` on the line and, deepest winning, moved the
+  // its depth as well stamped a second `plume-line-li-N` on the line and, deepest winning, moved the
   // whole line — the outer marker included — a step right with nothing on screen to explain it.
   // `1. *` is that shape, and it is what a half-deleted `**` leaves behind.
   const mark = node.node.firstChild;
@@ -337,7 +337,7 @@ function listItem(node: SyntaxNodeRef, w: Walk): void {
   // .cm-line, so nothing is lost by decorating just the first.
   const itemFirst = w.doc.lineAt(node.from);
   w.decorations.push(
-    Decoration.line({ class: `pane-line-li-${depth}` }).range(itemFirst.from)
+    Decoration.line({ class: `plume-line-li-${depth}` }).range(itemFirst.from)
   );
 
   // A ⇧⏎ continuation line takes the item's padding without the hanging indent, so it sits under the
@@ -353,7 +353,7 @@ function listItem(node: SyntaxNodeRef, w: Walk): void {
     const line = w.doc.line(n);
     if (line.length === 0) continue;
     w.decorations.push(
-      Decoration.line({ class: `pane-line-li-${depth}` }).range(line.from)
+      Decoration.line({ class: `plume-line-li-${depth}` }).range(line.from)
     );
     // And any literal indent an older note carries goes with it, for the same reason the
     // marker line's does: two answers to one indent is one too many.
@@ -430,7 +430,7 @@ function taskMarker(node: SyntaxNodeRef, w: Walk): void {
 }
 
 function listMark(node: SyntaxNodeRef, w: Walk): void {
-  // The literal indentation in front of the marker goes with it — indent comes from `pane-line-li-N`,
+  // The literal indentation in front of the marker goes with it — indent comes from `plume-line-li-N`,
   // and rendering the spaces too put level two a space-width right (108). Only where that span is
   // whitespace: on `1. 1. three` the inner marker's "indentation" is the outer marker, there is one
   // marker slot, so the outer keeps it and the inner stays literal (135, 121).
@@ -481,7 +481,7 @@ function marker(node: SyntaxNodeRef, w: Walk): void {
   const name = node.name;
   const parentName = node.node.parent?.name;
   const insideImage = parentName === "Image";
-  // An image hides none of itself, for the reason above: it is markdown Pane does not
+  // An image hides none of itself, for the reason above: it is markdown Plume does not
   // interpret, so every character of it stays on screen.
   if (insideImage) return;
   // Inside an `Autolink` the URL is the content and the `<` `>` are the markers, so it
@@ -538,7 +538,7 @@ function linePass(w: Walk): void {
       //
       // An empty *document* is exempt as well, and not for rhythm: its one line carries the
       // placeholder, and an 8px box would leave "Start writing…" spilling out of the line it is
-      // drawn in. An unfocused empty pane is exactly when that shows, because nothing is active.
+      // drawn in. An unfocused empty panel is exactly when that shows, because nothing is active.
       //
       const exempt = w.reveal.blankLineExempt(n);
       if (w.doc.length > 0 && line.length === 0 && !w.codeLines.has(n) && !exempt) {

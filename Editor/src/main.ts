@@ -1,16 +1,16 @@
 /*
- * The pane's web layer.
+ * The panel's web layer.
  *
  * Owns the editor, the chrome, the switcher and the format bar. Owns no truth: every note, every
  * pin and every setting arrives from Swift, and every change goes back the same way. The web layer
  * never touches a file.
  *
- * IPC is decision 4's: `WKScriptMessageHandler` inbound (window.webkit.messageHandlers.pane), and
- * `evaluateJavaScript` outbound, which lands on `window.paneHost`.
+ * IPC is decision 4's: `WKScriptMessageHandler` inbound (window.webkit.messageHandlers.plume), and
+ * `evaluateJavaScript` outbound, which lands on `window.plumeHost`.
  */
 
 import "./styles/tokens.css";
-import "./styles/pane.css";
+import "./styles/plume.css";
 import "./styles/markdown.css";
 import "./styles/switcher.css";
 import "./styles/action-panel.css";
@@ -62,7 +62,7 @@ import { moveBlockDown, moveBlockUp, nothing, selectBlockEnd, selectBlockStart }
 import { shiftTab, tab } from "./keyboard/tab";
 import { caretBlankLineSlack, livePreview } from "./live-preview";
 import { renumberOrderedLists } from "./renumber";
-import { paneDialect } from "./dialect";
+import { plumeDialect } from "./dialect";
 import { mountSwitcher, type NoteSummary } from "./switcher";
 import { MARKDOWN_FORMAT_KEYS, mountFormatBar, setHeading, pendingWrapExtension } from "./format-bar";
 import { noteTitle } from "./note-title";
@@ -89,7 +89,7 @@ type OutboundMessage =
   | { type: "revealInFinder" }
   /**
    * ⌘-click on a link (decision 138). Carries the node's raw text, not a URL: whether that text may
-   * be opened at all is `LinkTarget.resolve`'s question, in PaneKit where it is tested.
+   * be opened at all is `LinkTarget.resolve`'s question, in PlumeKit where it is tested.
    */
   | { type: "openLink"; target: string }
   /** ⌘K row fifteen (decision 103). Swift owns the vault, so the page can only ask. */
@@ -120,25 +120,25 @@ interface Rect {
 
 declare global {
   interface Window {
-    webkit?: { messageHandlers?: { pane?: { postMessage(message: unknown): void } } };
-    paneHost: typeof host;
+    webkit?: { messageHandlers?: { plume?: { postMessage(message: unknown): void } } };
+    plumeHost: typeof host;
   }
 }
 
 function send(message: OutboundMessage): void {
   // Absent when the bundle is opened directly in a browser for design work, which is a legitimate
   // way to run it — so this must degrade to a no-op rather than throw.
-  window.webkit?.messageHandlers?.pane?.postMessage(message);
+  window.webkit?.messageHandlers?.plume?.postMessage(message);
 }
 
 // ---------------------------------------------------------------------------------------------
 // Editor
 // ---------------------------------------------------------------------------------------------
 
-const paneEl = document.getElementById("pane") as HTMLElement;
+const plumeEl = document.getElementById("plume") as HTMLElement;
 const titleBarEl = document.getElementById("titlebar") as HTMLElement;
 const closeEl = document.getElementById("close") as HTMLElement;
-const paneTitleEl = document.getElementById("pane-title") as HTMLElement;
+const plumeTitleEl = document.getElementById("plume-title") as HTMLElement;
 const wordCountEl = document.getElementById("word-count") as HTMLElement;
 const editorHost = document.getElementById("editor-host") as HTMLElement;
 const toastEl = document.getElementById("toast") as HTMLElement;
@@ -177,9 +177,9 @@ function notifyEdited(view: EditorView): void {
  * switcher, followed as it is typed (decisions 2, 67). */
 function showTitle(lines: Iterable<string>): void {
   // "Untitled" rather than nothing, which is what an empty note showed until ⌘N stopped writing a
-  // file the moment it was pressed. A pane with no title and no text reads as broken; the reference
+  // file the moment it was pressed. A panel with no title and no text reads as broken; the reference
   // names it, and the switcher already calls a nameless note Untitled, so this is the two agreeing.
-  paneTitleEl.textContent = noteTitle(lines) || t("editor.untitled");
+  plumeTitleEl.textContent = noteTitle(lines) || t("editor.untitled");
 }
 
 /** The footer's number, and which one: a press swaps it, and it carries no bubble — a number in
@@ -212,7 +212,7 @@ let settlePass = false;
 /**
  * Content height is asked for when the *content* changes, plus one settle pass for CodeMirror's
  * refined layout — never from the `ResizeObserver`, which fed a report → resize → re-estimate loop
- * and made the pane overshoot on every new line (decision 40, amended 2026-09-17).
+ * and made the panel overshoot on every new line (decision 40, amended 2026-09-17).
  */
 function scheduleContentHeight(): void {
   if (heightFrame) return;
@@ -225,14 +225,14 @@ function scheduleContentHeight(): void {
 
 function reportContentHeight(): void {
   // `view.contentHeight`, never `scrollHeight`: the host is `height: 100%`, so scrollHeight equals
-  // clientHeight and the pane would report its current height as the one it wants. Minus the caret's
+  // clientHeight and the panel would report its current height as the one it wants. Minus the caret's
   // blank-line slack, a rendering choice the window must not follow (`caretBlankLineSlack`).
   const content = view.contentHeight - caretBlankLineSlack(view);
 
   // Whichever of the three rows is laid out, found by measuring: with ⌘F open both the footer and
   // the format bar are hidden, and reading an attribute measured a `display: none` row as 0 (decision 66).
-  const bar = [".find", ".format-bar", ".pane__footer"]
-    .map((selector) => paneEl.querySelector<HTMLElement>(selector))
+  const bar = [".find", ".format-bar", ".plume__footer"]
+    .map((selector) => plumeEl.querySelector<HTMLElement>(selector))
     .find((element) => (element?.offsetHeight ?? 0) > 0);
   const chrome = titleBarEl.offsetHeight + (bar?.offsetHeight ?? 0) + bannerEl.offsetHeight;
 
@@ -420,7 +420,7 @@ function ruleInputRule(): Extension {
     if (!new RegExp(`^[ \\t]*(?:\\${text}[ \\t]*)+$`).test(line.text)) return false;
     // Not on the note's first line. A rule there separates nothing, and `---` at the top of an
     // empty note is how a YAML frontmatter fence is typed — adding a line under it would break the
-    // bytes of something Pane does not interpret and must not damage (121).
+    // bytes of something Plume does not interpret and must not damage (121).
     if (line.number === 1) return false;
 
     const after = state.update({ changes: { from, to, insert: text } }).state;
@@ -534,7 +534,7 @@ const DEFAULT_SHORTCUTS: Record<string, string> = {
   browseNotes: "Mod-p",
   navigateBack: "Mod-[",
   navigateForward: "Mod-]",
-  pinPane: "Shift-Mod-p",
+  pinPlume: "Shift-Mod-p",
   formatBar: "Alt-Mod-,",
   actionPanel: "Mod-k",
   revealInFinder: "Alt-Mod-r",
@@ -589,7 +589,7 @@ const actionHandlers: Record<string, () => boolean> = {
   browseNotes: () => (toggleSwitcher(), true),
   navigateBack: () => (send({ type: "navigate", back: true }), true),
   navigateForward: () => (send({ type: "navigate", back: false }), true),
-  pinPane: () => (send({ type: "togglePin", filename: currentFilename }), true),
+  pinPlume: () => (send({ type: "togglePin", filename: currentFilename }), true),
   formatBar: () => (toggleFormatBar(), true),
   revealInFinder: () => (send({ type: "revealInFinder" }), true),
   settings: () => (send({ type: "openSettings" }), true),
@@ -614,7 +614,7 @@ const actionHandlers: Record<string, () => boolean> = {
   renameFile: () => (send({ type: "renameFile" }), true),
 };
 
-function paneShortcuts(bindings: Record<string, string>): Extension {
+function plumeShortcuts(bindings: Record<string, string>): Extension {
   const run: Record<string, () => boolean> = { ...actionHandlers, actionPanel: () => (toggleActions(), true) };
 
   return keymap.of(
@@ -641,9 +641,9 @@ function baseExtensions(): Extension[] {
     // (decision 108, amended 2026-09-17).
     markdown({
       base: markdownLanguage,
-      // Pane's three rules over CommonMark: markers wait for their space, an item holds text, a
+      // Plume's three rules over CommonMark: markers wait for their space, an item holds text, a
       // quote holds lists (158).
-      extensions: paneDialect,
+      extensions: plumeDialect,
       addKeymap: false,
       htmlTagLanguage: html({ matchClosingTags: false, autoCloseTags: false }),
     }),
@@ -667,7 +667,7 @@ function baseExtensions(): Extension[] {
     renumberOrderedLists(),
     // An empty note said nothing at all — a caret in a blank rectangle. The reference prompts, and
     // it matters more here than it does there: ⌘N now leaves nothing on disk until the first write,
-    // so an empty pane is genuinely a blank page rather than a file that already exists.
+    // so an empty panel is genuinely a blank page rather than a file that already exists.
     placeholderCompartment.of(placeholder(t("editor.placeholder"))),
     // First among the input rules: a pair waiting at a line start takes the first character (148).
     pendingWrapExtension(),
@@ -723,10 +723,10 @@ function baseExtensions(): Extension[] {
       ])
     ),
 
-    // Pane's own shortcuts, in their own compartment so the Shortcuts tab can rebind them without
+    // Plume's own shortcuts, in their own compartment so the Shortcuts tab can rebind them without
     // rebuilding the editor. Listed before the keymap below so they win over CodeMirror's defaults —
     // within one precedence level, the earlier extension is the higher one.
-    shortcutsCompartment.of(paneShortcuts(DEFAULT_SHORTCUTS)),
+    shortcutsCompartment.of(plumeShortcuts(DEFAULT_SHORTCUTS)),
 
     keymap.of([
       // Tier 2: the markdown formatting keys, fixed rather than rebindable (see the note on
@@ -736,7 +736,7 @@ function baseExtensions(): Extension[] {
       ...MARKDOWN_FORMAT_KEYS,
 
       // Text size, also fixed and also convention — ⌘+ / ⌘- / ⌘0 mean this everywhere. The
-      // Appearance tab has printed "⌘= / ⌘− in any pane" beside the stepper since it shipped while
+      // Appearance tab has printed "⌘= / ⌘− in any panel" beside the stepper since it shipped while
       // neither key was bound to anything; ⌘0 comes from the reference, which carries all three.
       // Swift owns the value because it is a setting, so these only ask.
       { key: "Mod-=", run: () => (send({ type: "textSize", action: "in" }), true) },
@@ -747,7 +747,7 @@ function baseExtensions(): Extension[] {
       { key: "Mod-+", run: () => (send({ type: "textSize", action: "in" }), true) },
       { key: "Mod--", run: () => (send({ type: "textSize", action: "out" }), true) },
       { key: "Mod-0", run: () => (send({ type: "textSize", action: "reset" }), true) },
-      // Escape dismisses the pane. The switcher handles its own Escape while it is open, so this
+      // Escape dismisses the panel. The switcher handles its own Escape while it is open, so this
       // only ever fires with the caret in the editor — where the reflex is "put this away", not
       // "cancel something".
       { key: "Escape", run: () => (send({ type: "close" }), true) },
@@ -783,7 +783,7 @@ function toggleFormatBar(): void {
   // One footer row, never two (decision 22). Find and the format bar are both that row, so opening
   // either has to put the other away.
   find?.close();
-  paneEl.toggleAttribute("data-format-bar");
+  plumeEl.toggleAttribute("data-format-bar");
   formatBar?.refresh();
   // The bar and the footer are different heights, so swapping them changes how much room the note
   // has — and the window has to follow.
@@ -802,7 +802,7 @@ document.getElementById("word-count")!.addEventListener("mousedown", (event) => 
 });
 
 // Named from the first frame rather than from the first edit. The markup ships "0 words" as text
-// and nothing had ever set the tip, so an untouched pane had one control the bubble could not name.
+// and nothing had ever set the tip, so an untouched panel had one control the bubble could not name.
 renderCount(view.state.doc.toString());
 
 document.getElementById("format-toggle")!.addEventListener("click", toggleFormatBar);
@@ -821,14 +821,14 @@ document.getElementById("open-actions")!.addEventListener("click", () => toggleA
 
 /* Every button names itself the same way: one string carries the shortcut and becomes the accessible
  * name, so a key cannot be advertised differently in two places (decision 58). */
-mountTooltips(paneEl);
+mountTooltips(plumeEl);
 
 /** The chrome's tooltips read the binding in force, re-read whenever settings arrive — decision 68's
  * rule, its fourth instance (92). */
 const CHROME_TIPS: [selector: string, label: string, action: string | null][] = [
   ["#close", "editor.tip.close", null],
   ["#keep-on-top", "editor.tip.keepOnTop", null],
-  ["#pin", "editor.tip.unpin", "pinPane"],
+  ["#pin", "editor.tip.unpin", "pinPlume"],
   ["#open-actions", "editor.tip.actions", "actionPanel"],
   ["#browse", "editor.tip.notes", "browseNotes"],
   ["#new-note", "editor.tip.newNote", "newNote"],
@@ -845,7 +845,7 @@ function refreshChromeTooltips(): void {
     if (!element) continue;
     // The thumbtack names the thing it will do, so its text follows the state.
     const label = t(
-      selector === "#keep-on-top" && paneEl.hasAttribute("data-keep-on-top")
+      selector === "#keep-on-top" && plumeEl.hasAttribute("data-keep-on-top")
         ? "editor.tip.keepOnTop.on"
         : labelKey
     );
@@ -855,7 +855,7 @@ function refreshChromeTooltips(): void {
 }
 // The first call lives beside `liveShortcuts` below, not here: that binding is a `let` declared
 // further down the file, and reading it from up here is a temporal-dead-zone throw — which took
-// out `window.paneHost` entirely and presented as the whole bridge being missing.
+// out `window.plumeHost` entirely and presented as the whole bridge being missing.
 
 formatBar = mountFormatBar(
   document.getElementById("format-bar") as HTMLElement,
@@ -866,7 +866,7 @@ formatBar = mountFormatBar(
 
 find = mountFind({
   root: document.getElementById("find") as HTMLElement,
-  pane: paneEl,
+  plume: plumeEl,
   view,
   onLayoutChange: () => {
     scheduleContentHeight();
@@ -876,7 +876,7 @@ find = mountFind({
 
 /** Swift owns this — it is a window property, not a document one — and mirrors it back here. */
 let hiddenFromCapture = false;
-/** Likewise window state, and it changes without this layer being asked: dragging the pane turns it
+/** Likewise window state, and it changes without this layer being asked: dragging the panel turns it
  *  off (decision 40). Only ever set from Swift. */
 let autoSizing = true;
 let onEverySpace = true;
@@ -885,11 +885,11 @@ const actionsEl = document.getElementById("actions") as HTMLElement;
 const switcherEl = document.getElementById("switcher") as HTMLElement;
 
 /* Both overlays are placed by one calculation whenever the panel opens, its height changes, or the
- * pane's height changes after Swift grows the window (decision 45). One `ResizeObserver`, and `top`
+ * panel's height changes after Swift grows the window (decision 45). One `ResizeObserver`, and `top`
  * changes no size, so it cannot feed itself. */
 function placeOverlays(): void {
-  placeOverlay(switcherEl, paneEl);
-  placeOverlay(actionsEl, paneEl);
+  placeOverlay(switcherEl, plumeEl);
+  placeOverlay(actionsEl, plumeEl);
 }
 
 new ResizeObserver(placeOverlays).observe(switcherEl);
@@ -897,8 +897,8 @@ new ResizeObserver(placeOverlays).observe(actionsEl);
 
 const actions = mountActionPanel({
   root: actionsEl,
-  pane: paneEl,
-  isPinned: () => paneEl.hasAttribute("data-pinned"),
+  plume: plumeEl,
+  isPinned: () => plumeEl.hasAttribute("data-pinned"),
   isHiddenFromCapture: () => hiddenFromCapture,
   isAutoSizing: () => autoSizing,
   isOnEverySpace: () => onEverySpace,
@@ -916,7 +916,7 @@ const actions = mountActionPanel({
 
 const switcher = mountSwitcher({
   root: switcherEl,
-  pane: paneEl,
+  plume: plumeEl,
   onQuery: (query) => send({ type: "requestNotes", query }),
   onOpen: (filename) => send({ type: "openNote", filename }),
   onCreate: (title) => send({ type: "createNote", title }),
@@ -1041,7 +1041,7 @@ const host = {
    */
   loadNote(filename: string, text: string, caret: number, pinned: boolean): void {
     applyingRemoteEdit = true;
-    // An empty name means a draft: ⌘N no longer touches the disk, so the pane can hold a note that
+    // An empty name means a draft: ⌘N no longer touches the disk, so the panel can hold a note that
     // has no file yet. Stored as null rather than "" so every `currentFilename ?` guard here —
     // Delete Note, Pin Note — declines instead of naming a file that does not exist.
     currentFilename = filename || null;
@@ -1064,7 +1064,7 @@ const host = {
       applyingRemoteEdit = false;
     }
 
-    paneEl.toggleAttribute("data-pinned", pinned);
+    plumeEl.toggleAttribute("data-pinned", pinned);
     document.getElementById("pin")!.setAttribute("aria-pressed", String(pinned));
     showTitle(text.split("\n"));
     renderCount(text);
@@ -1095,7 +1095,7 @@ const host = {
   },
 
   setPinned(pinned: boolean): void {
-    paneEl.toggleAttribute("data-pinned", pinned);
+    plumeEl.toggleAttribute("data-pinned", pinned);
     document.getElementById("pin")!.setAttribute("aria-pressed", String(pinned));
   },
 
@@ -1103,7 +1103,7 @@ const host = {
     // Kept for anything that genuinely cares about key state. It no longer drives the chrome —
     // decision 41 moved that to the cursor — and so it no longer changes the title bar's layout,
     // which is why the drag regions do not need re-reporting here any more.
-    paneEl.toggleAttribute("data-focused", focused);
+    plumeEl.toggleAttribute("data-focused", focused);
   },
 
   /** Appearance, accent, theme and key bindings. The CSS keys off these attributes and variables. */
@@ -1133,8 +1133,8 @@ const host = {
       root.setAttribute("data-vibrancy", opacity < 1 ? "on" : "off");
       root.style.setProperty("--panel-opacity", String(opacity));
       // Liquid Glass scrim, cubic so the slider has real range. Unfocused is the base; focused is
-      // lifted toward opaque so a pane you are reading or editing is the deeper one. At the fully
-      // transparent end the unfocused pane is bare glass and the focused one keeps a light wash.
+      // lifted toward opaque so a panel you are reading or editing is the deeper one. At the fully
+      // transparent end the unfocused panel is bare glass and the focused one keeps a light wash.
       const base = opacity ** 3;
       root.style.setProperty("--panel-glass-alpha", String(base));
       root.style.setProperty("--panel-glass-alpha-focus", String(base + (1 - base) * 0.3));
@@ -1153,7 +1153,7 @@ const host = {
     }
 
     // Decision 19: a theme is a CSS file. Swift reads it and hands over the text; all that happens
-    // here is that it goes last in the cascade, after tokens/pane/markdown, so a theme can override
+    // here is that it goes last in the cascade, after tokens/plume/markdown, so a theme can override
     // any token without !important and without knowing the stylesheet order.
     if (settings.themeCSS !== undefined) themeStyleEl.textContent = settings.themeCSS;
 
@@ -1165,7 +1165,7 @@ const host = {
     if (settings.shortcuts) {
       liveShortcuts = { ...DEFAULT_SHORTCUTS, ...settings.shortcuts };
       view.dispatch({
-        effects: shortcutsCompartment.reconfigure(paneShortcuts(settings.shortcuts)),
+        effects: shortcutsCompartment.reconfigure(plumeShortcuts(settings.shortcuts)),
       });
       // The chrome's bubbles print keys too, and a rebind has to reach them or a button goes on
       // advertising a key that now does something else — decision 17's rule, in its fourth place.
@@ -1187,7 +1187,7 @@ const host = {
   },
 
   setKeepOnTop(on: boolean): void {
-    paneEl.toggleAttribute("data-keep-on-top", on);
+    plumeEl.toggleAttribute("data-keep-on-top", on);
     document.getElementById("keep-on-top")!.setAttribute("aria-pressed", String(on));
     refreshChromeTooltips();
   },
@@ -1201,23 +1201,23 @@ const host = {
   },
 
   /** The close dot alone, from the same read as `setHover`: `:hover` cannot, because the page gets no
-   * mouse events with the pane over another app (decision 107). */
+   * mouse events with the panel over another app (decision 107). */
   setCloseHover(inside: boolean): void {
-    paneEl.toggleAttribute("data-close-hover", inside);
+    plumeEl.toggleAttribute("data-close-hover", inside);
   },
 
   setHover(inside: boolean): void {
-    paneEl.toggleAttribute("data-hover", inside);
-    // The dot cannot be hovered when the pane is not: both come from one pointer read, and leaving
-    // the pane behind a stale `data-close-hover` would strand a lit dot on a dimmed bar.
-    if (!inside) paneEl.removeAttribute("data-close-hover");
+    plumeEl.toggleAttribute("data-hover", inside);
+    // The dot cannot be hovered when the panel is not: both come from one pointer read, and leaving
+    // the panel behind a stale `data-close-hover` would strand a lit dot on a dimmed bar.
+    if (!inside) plumeEl.removeAttribute("data-close-hover");
     // The pointer can leave a *window* without the page seeing a leave event, and the chrome it was
     // over is about to fade out from under any tooltip naming it.
     if (!inside) hideTooltip();
   },
 
   /** Where the pointer is, from Swift, on every move: the page gets no mouse events in the state the
-   * pane lives in (decision 120). */
+   * panel lives in (decision 120). */
   setPointer(x: number, y: number): void {
     setPointer(x, y);
   },
@@ -1274,7 +1274,7 @@ const host = {
   },
 };
 
-window.paneHost = host;
+window.plumeHost = host;
 
 /* A language switch re-says everything built once: the static markup, the title and footer count,
  * the empty-note prompt, and every chrome tooltip. Open overlays render fresh each time they open,
@@ -1292,27 +1292,27 @@ function retranslate(): void {
 onLanguageChange(retranslate);
 translateStaticMarkup();
 
-/* Hover arrives from Swift (`setHover`): the page's own `mouseenter` only fires once the pane has been
+/* Hover arrives from Swift (`setHover`): the page's own `mouseenter` only fires once the panel has been
  * clicked (decisions 41, 120). The web layer owns no truth. */
 
 // Clicking the banner acknowledges it. That is the whole dismissal affordance: a conflict banner
-// with an ✕ would be a control the user must operate before the pane looks normal again, which is
+// with an ✕ would be a control the user must operate before the panel looks normal again, which is
 // the interruption decision 8 rules out.
 bannerEl.addEventListener("click", () => host.hideBanner());
 
 // Drag regions only, on every title-bar relayout. Never content height: the window's size is not an
-// input to how tall the content wants to be, and reporting it here is what made the pane overshoot
+// input to how tall the content wants to be, and reporting it here is what made the panel overshoot
 // (decision 40, amended 2026-09-17).
 new ResizeObserver(() => {
   reportDragRegions();
   placeOverlays();
-}).observe(paneEl);
+}).observe(plumeEl);
 
-/* The pin enters and leaves the title bar with the pane's pinned state (decision 54), which moves
+/* The pin enters and leaves the title bar with the panel's pinned state (decision 54), which moves
  * the buttons beside it — and the drag-exclusion rects Swift hit-tests are measured from those
  * boxes. This is the same hook the title's old scroll-gated reveal needed, pointed at the one
  * attribute that still changes the bar's layout. */
-new MutationObserver(reportDragRegions).observe(paneEl, {
+new MutationObserver(reportDragRegions).observe(plumeEl, {
   attributes: true,
   attributeFilter: ["data-pinned", "data-keep-on-top"],
 });

@@ -1,12 +1,12 @@
 /*
  * Design tokens, extracted from the Stage 2 design record.
  *
- * Every value here appears in `Pane Design.dc.html`. Where the design used a literal in one frame and
+ * Every value here appears in `Plume Design.dc.html`. Where the design used a literal in one frame and
  * a near-identical literal in another, the more frequent one wins and the difference is noted. Nothing
  * is invented: if a value is needed and the design does not have one, it gets a comment saying so.
  *
  * Two things the design parameterises through its own props block, which `applyVars()` implements:
- * the accent, and the pane background opacity. Both are settings (see Settings.swift), so both are
+ * the accent, and the panel background opacity. Both are settings (see Settings.swift), so both are
  * variables here rather than baked in.
  */
 
@@ -28,7 +28,7 @@
 
   /* The overlays get their OWN blur, and it is real.
    *
-   * `--panel-blur` is forced to `none` in both vibrancy states below, correctly: the pane's material
+   * `--panel-blur` is forced to `none` in both vibrancy states below, correctly: the panel's material
    * is an NSVisualEffectView behind the web view, and a CSS blur on top of it would be a second,
    * wrong one. But the switcher and ⌘K sit over the NOTE, inside the page — which is precisely the
    * case backdrop-filter does handle. Sharing one token meant they inherited `none` and rendered as
@@ -38,18 +38,18 @@
   /* One geometry for both overlays. They are the same object in two modes, and the design drew them
    * from different frames — 460 vs 400 wide, 15px vs 14px search — which read as two components. */
   --overlay-width: 460px;
-  /* The width is a maximum now, not a width. A pane is resizable, and at the 496pt this one is
-   * actually used at, 460 left an 18pt margin either side — the panel read as wedged into the pane
+  /* The width is a maximum now, not a width. A panel is resizable, and at the 496pt this one is
+   * actually used at, 460 left an 18pt margin either side — the panel read as wedged into the panel
    * rather than placed in it. The reference, measured in a window of exactly that size, draws its
    * panel 362 wide with 67pt clear on each side. */
   --overlay-margin-x: 52px;
   /* Placement, read by overlay.ts. `--overlay-top-min` is also spelled in Swift, as the 54 in
-   * `PaneController`'s `54 + height + 16`: it is how tall a pane the panel needs, and Swift cannot
+   * `PlumeController`'s `54 + height + 16`: it is how tall a panel the panel needs, and Swift cannot
    * read a stylesheet. The two have to move together. */
   --overlay-top-min: 54px;
   --overlay-gap-bottom: 16px;
 
-  /* The pane's stack, bottom to top, in one place (182). The tooltip is last by derivation: it names
+  /* The panel's stack, bottom to top, in one place (182). The tooltip is last by derivation: it names
    * whatever the pointer rests on, and that can be inside any layer here. A layer added above the
    * toast must become the base of `--layer-tip`. */
   --layer-scrim: 9;
@@ -60,7 +60,7 @@
   --overlay-search-size: 15px;
   --overlay-search-padding: 13px 16px;
   --overlay-row-size: 13.5px;
-  /* How far the pane behind an open overlay recedes (frame 2a). Applied to both, not just ⌘K. */
+  /* How far the panel behind an open overlay recedes (frame 2a). Applied to both, not just ⌘K. */
   --overlay-dim: 0.45;
   --panel-bg: rgba(247, 247, 249, 0.88);
 
@@ -93,8 +93,8 @@
    * sit straight on the material (no surface of their own), so the old picks — faint for the resting
    * title, quaternary for hovered icons — measured 2.3:1 and 3.2:1 on the flat panel and worse over a
    * wallpaper. Three steps, each answering one state:
-   *   rest     pane not hovered: title and word count, one notch softer than the hovered colour
-   *   label    pane hovered: title, word count, and the icons at rest
+   *   rest     panel not hovered: title and word count, one notch softer than the hovered colour
+   *   label    panel hovered: title, word count, and the icons at rest
    *   control-hover   pointer on a button: full strength, so the target is unmistakable
    * and a stronger fill under it, because a 6% wash alone was the whole of the old hover feedback. */
   --chrome-label-rest: #4c4c51;
@@ -120,7 +120,7 @@
   /* ---- Chrome specifics ---------------------------------------------------------------------- */
   --close-dot: #fe5f57;
   --close-dot-border: 0.5px solid rgba(0, 0, 0, 0.15);
-  /* Unfocused panes drop the red dot to neutral (design frame 1e). */
+  /* Unfocused panels drop the red dot to neutral (design frame 1e). */
   --close-dot-inactive: #d0d0d4;
   /* Decision 107. The fill is the whole treatment: it darkens under the pointer and again on press.
    * No glyph — a × at 12px is a smudge, and the system only draws one to tell three dots apart. */
@@ -131,14 +131,14 @@
 
   --shadow-panel: 0 24px 60px rgba(0, 0, 0, 0.28), 0 2px 8px rgba(0, 0, 0, 0.08);
   --shadow-overlay: 0 20px 50px rgba(0, 0, 0, 0.3);
-  --shadow-pane-unfocused: 0 10px 30px rgba(0, 0, 0, 0.16);
+  --shadow-plume-unfocused: 0 10px 30px rgba(0, 0, 0, 0.16);
 
-  /* The switcher's own bottom fade, and only that — the pane's is a mask now (see `.pane__content`).
+  /* The switcher's own bottom fade, and only that — the panel's is a mask now (see `.plume__content`).
    * "Matches the panel background so it reads as the surface, not as a grey band" is what this used
    * to claim while doing the opposite: it was tuned against the translucency-off `--panel-bg`, and
    * when the vibrancy scrim redefined that token to 70% these were not redefined with it. The
    * switcher panel is opaque enough that the mismatch does not read there the way it did on the
-   * pane, but it is the same mismatch and the same fix would work. */
+   * panel, but it is the same mismatch and the same fix would work. */
   --fade-to: rgba(243, 243, 245, 0.95);
   --fade-from: rgba(247, 247, 249, 0);
 
@@ -162,15 +162,15 @@
   --fade-height: 44px;
 
   /* Fixed width — "width never changes" is rule 2. The measure inside it is narrower still, so long
-   * lines stay readable rather than running the full width of the pane. */
-  --pane-width: 692px;
-  /* The measure exists for a pane dragged wide, not for the default one. At 692 pt it barely binds,
-   * which is the point — 640 px against a 692 pt pane meant the text sat in a 44 px gutter on the
-   * left and a 96 px one on the right, and the pane read as mostly empty. */
+   * lines stay readable rather than running the full width of the panel. */
+  --plume-width: 692px;
+  /* The measure exists for a panel dragged wide, not for the default one. At 692 pt it barely binds,
+   * which is the point — 640 px against a 692 pt panel meant the text sat in a 44 px gutter on the
+   * left and a 96 px one on the right, and the panel read as mostly empty. */
   --content-measure: 680px;
   /* Bottom padding has to clear `--fade-height`, not merely look generous.
    *
-   * It was 32px against a 44px fade, so with auto-sizing on — where the pane ends exactly where the
+   * It was 32px against a 44px fade, so with auto-sizing on — where the panel ends exactly where the
    * note does — the last line of every note sat *inside* the gradient and rendered half washed out.
    * That reads as the text being cut off rather than as a scroll hint. 52px puts a clear 8px
    * between the last baseline and the top of the fade. */
@@ -190,7 +190,7 @@
    *
    * A ceiling, never a height. A ⌘K filtered down to two rows is two rows tall, and a four-note
    * vault gets a four-note switcher; this only bites when there is more content than fits, which is
-   * exactly when the pane has to grow to hold it.
+   * exactly when the panel has to grow to hold it.
    *
    * 470, and the number this replaces is worth keeping because of how it was wrong. It was 380,
    * reasoned off Raycast Notes: its note list runs in a 249px viewport (a plan banner eating ~50 of
@@ -208,7 +208,7 @@
    *     380px  worst 3 notes      430px  worst 4      470px  worst 5      507px  worst 5
    *
    * 470 is the knee: it never drops below five, which is Raycast's ~5.3 rows in ~299px of pure
-   * list. It costs a 627pt pane against 380's 507 — still under the 676 the uncapped switcher asked
+   * list. It costs a 627pt panel against 380's 507 — still under the 676 the uncapped switcher asked
    * for, so the reason this cap exists survives intact. ⌘K gets 13 of its 16 rows. */
   --overlay-panel-height: 470px;
   --switcher-row-padding: 7px 16px;
@@ -283,7 +283,7 @@
     --fill-chrome-hover: rgba(255, 255, 255, 0.13);
     --fill-chrome-pressed: rgba(255, 255, 255, 0.19);
 
-    /* The design uses a slightly stronger border on the switcher (0.11) than on the pane (0.1).
+    /* The design uses a slightly stronger border on the switcher (0.11) than on the panel (0.1).
      * Kept as one value: the difference is below perception and two tokens would invite drift. */
     --panel-border: rgba(255, 255, 255, 0.1);
     --separator: rgba(255, 255, 255, 0.09);
@@ -305,7 +305,7 @@
 
     --shadow-panel: 0 24px 60px rgba(0, 0, 0, 0.55);
     --shadow-overlay: 0 20px 50px rgba(0, 0, 0, 0.55);
-    --shadow-pane-unfocused: 0 10px 30px rgba(0, 0, 0, 0.4);
+    --shadow-plume-unfocused: 0 10px 30px rgba(0, 0, 0, 0.4);
 
     --fade-from: rgba(30, 30, 34, 0);
     --fade-to: rgba(26, 26, 30, 0.95);
@@ -353,7 +353,7 @@
 
   --shadow-panel: 0 24px 60px rgba(0, 0, 0, 0.55);
   --shadow-overlay: 0 20px 50px rgba(0, 0, 0, 0.55);
-  --shadow-pane-unfocused: 0 10px 30px rgba(0, 0, 0, 0.4);
+  --shadow-plume-unfocused: 0 10px 30px rgba(0, 0, 0, 0.4);
 
   --fade-from: rgba(30, 30, 34, 0);
   --fade-to: rgba(26, 26, 30, 0.95);
@@ -367,7 +367,7 @@
  * not part of this document. So Swift puts an NSVisualEffectView behind the web view instead, and the
  * page must not paint over it — an 88% fill on top of a real material is just a fogged material.
  *
- * Only the pane's own surface goes transparent. The two overlays keep their own `--overlay-bg` and
+ * Only the panel's own surface goes transparent. The two overlays keep their own `--overlay-bg` and
  * `--overlay-blur`, because they sit over the note *inside* the page, which is exactly the case
  * backdrop-filter does handle. */
 :root[data-vibrancy="on"] {
@@ -375,10 +375,10 @@
    *
    * The original reasoning — "an 88% fill on top of a real material is just a fogged material" —
    * was right that the design's full 88% would smother it, and wrong to conclude the page should
-   * paint nothing at all. Measured against the design: with the page transparent the pane renders
+   * paint nothing at all. Measured against the design: with the page transparent the panel renders
    * (229,229,229) where the design's own rgba(247,247,249,0.88) over the same backdrop composites
    * to (248,248,250). Nineteen levels darker, and the blue in the design's grey gone entirely —
-   * `.popover` is a neutral wash, so the pane read dim and grey, worst of all over a dark wallpaper.
+   * `.popover` is a neutral wash, so the panel read dim and grey, worst of all over a dark wallpaper.
    *
    * So the two jobs are split: NSVisualEffectView samples what is behind the window, which is the
    * one thing CSS cannot do, and this scrim supplies the colour the design actually specified. The
@@ -402,10 +402,10 @@
  * page contributes only a scrim for legibility.
  *
  * The scrim follows key state, which the glass itself does not (measured: the same clear glass
- * renders identically in and out of key). A pane you are reading or editing gets the deeper
+ * renders identically in and out of key). A panel you are reading or editing gets the deeper
  * `--panel-glass-alpha-focus`; one you have clicked away from relaxes to `--panel-glass-alpha` and
  * lets the wallpaper through. Both are set from the slider in `applySettings`. The rule that paints
- * it is `.pane` in pane.css, which reads these. */
+ * it is `.plume` in plume.css, which reads these. */
 :root[data-vibrancy="on"][data-material="glass"] {
   --panel-scrim-rgb: 247, 247, 249;
   --panel-bg: rgba(var(--panel-scrim-rgb), var(--panel-glass-alpha, 0.2));
@@ -421,7 +421,7 @@
   --panel-scrim-rgb: 30, 30, 34;
 }
 
-:root[data-vibrancy="on"][data-material="glass"] .pane[data-focused] {
+:root[data-vibrancy="on"][data-material="glass"] .plume[data-focused] {
   --panel-bg: rgba(var(--panel-scrim-rgb), var(--panel-glass-alpha-focus, 0.4));
 }
 

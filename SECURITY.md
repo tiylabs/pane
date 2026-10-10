@@ -2,7 +2,7 @@
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability in Pane, please do not disclose it in a public issue.
+If you discover a security vulnerability in Plume, please do not disclose it in a public issue.
 
 Please report it privately through GitHub Security Advisories when available. Include enough information to reproduce and understand the issue, such as the affected version, steps to reproduce, and potential impact.
 

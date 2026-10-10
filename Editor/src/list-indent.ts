@@ -13,7 +13,7 @@
  *
  * The second one is not a nested list. CommonMark needs a child indented to the **parent's content
  * column**, and two spaces under `1. ` falls short of three — so every markdown tool, pandoc
- * included, reads those two lines as one flat list with two items, and so does Pane. The keystroke
+ * included, reads those two lines as one flat list with two items, and so does Plume. The keystroke
  * did nothing except add junk whitespace and confuse the renumbering filter, which then counted
  * straight through the levels: 1., 2., 3., 4. where the writer meant 1., 1., 2., 2.
  *

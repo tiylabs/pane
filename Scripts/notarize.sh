@@ -2,8 +2,8 @@
 #
 # Submits a file to Apple's notary service, waits for the verdict, and staples the ticket.
 #
-#   Scripts/notarize.sh build/Pane.app      zips the bundle for upload, staples the .app itself
-#   Scripts/notarize.sh build/Pane-1.0.dmg  uploads the image as is, staples the image
+#   Scripts/notarize.sh build/Plume.app      zips the bundle for upload, staples the .app itself
+#   Scripts/notarize.sh build/Plume-1.0.dmg  uploads the image as is, staples the image
 #
 # Credentials come from the environment, never from flags, so they cannot land in a process list or
 # a shell history:
@@ -17,7 +17,7 @@
 set -euo pipefail
 
 TARGET="${1:-}"
-[[ -n "$TARGET" && -e "$TARGET" ]] || { echo "usage: $0 <Pane.app|Pane.dmg>" >&2; exit 2; }
+[[ -n "$TARGET" && -e "$TARGET" ]] || { echo "usage: $0 <Plume.app|Plume.dmg>" >&2; exit 2; }
 
 for v in APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID; do
 	[[ -n "${!v:-}" ]] || { echo "error: $v is not set" >&2; exit 1; }
@@ -25,7 +25,7 @@ done
 
 say() { printf '\033[1m==>\033[0m %s\n' "$*"; }
 
-WORK="$(mktemp -d "${TMPDIR:-/tmp}/pane-notarize.XXXXXX")"
+WORK="$(mktemp -d "${TMPDIR:-/tmp}/plume-notarize.XXXXXX")"
 trap 'rm -rf "$WORK"' EXIT
 
 # notarytool takes a zip, a pkg or a dmg — not a bare .app.

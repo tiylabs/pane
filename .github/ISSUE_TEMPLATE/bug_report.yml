@@ -1,18 +1,18 @@
 name: Bug report
-description: Something in Pane behaved wrongly
+description: Something in Plume behaved wrongly
 labels: ["bug"]
 body:
   - type: markdown
     attributes:
       value: |
-        Almost every fault in Pane has been found by someone using it and reporting what they saw.
+        Almost every fault in Plume has been found by someone using it and reporting what they saw.
         If something felt wrong but you can't say why, that is still worth filing.
 
   - type: textarea
     id: what
     attributes:
       label: What happened
-      description: What you did, and what Pane did instead of what you expected.
+      description: What you did, and what Plume did instead of what you expected.
       placeholder: |
         I pressed ⇧⌘7 with the caret in a nested list item and the level above it converted too.
     validations:
@@ -21,7 +21,7 @@ body:
   - type: input
     id: version
     attributes:
-      label: Pane version
+      label: Plume version
       description: Settings → About, or the version of the disk image you installed.
       placeholder: "0.6.4"
     validations:
@@ -40,7 +40,7 @@ body:
     attributes:
       label: Where your notes folder lives
       description: >
-        Sync providers cause a specific family of faults — a file changing underneath Pane, a note
+        Sync providers cause a specific family of faults — a file changing underneath Plume, a note
         arriving late, two machines writing at once — so this narrows things down quickly.
       options:
         - Local disk only
@@ -54,7 +54,7 @@ body:
   - type: dropdown
     id: persists
     attributes:
-      label: Does it survive quitting Pane?
+      label: Does it survive quitting Plume?
       options:
         - "Yes — it happens again after a restart"
         - "No — a restart cleared it"

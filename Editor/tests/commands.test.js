@@ -138,12 +138,12 @@ export function runUndo(view, doc) {
   const B = "NOTE B\n";
 
   // Opening a note is not an edit.
-  window.paneHost.loadNote("a.md", A, 0, false);
+  window.plumeHost.loadNote("a.md", A, 0, false);
   undo();
   check("straight after opening a note, does nothing", A, view.state.doc.toString());
 
   // An ordinary edit undoes, and redoes.
-  window.paneHost.loadNote("a.md", A, 0, false);
+  window.plumeHost.loadNote("a.md", A, 0, false);
   view.dispatch({ changes: { from: 6, insert: " edited" } });
   undo();
   check("an edit comes back", A, view.state.doc.toString());
@@ -151,9 +151,9 @@ export function runUndo(view, doc) {
   check("and redo puts it back", "NOTE A edited\n", view.state.doc.toString());
 
   // Undo must not walk into the note you were in before.
-  window.paneHost.loadNote("a.md", A, 0, false);
+  window.plumeHost.loadNote("a.md", A, 0, false);
   view.dispatch({ changes: { from: 6, insert: " edited" } });
-  window.paneHost.loadNote("b.md", B, 0, false);
+  window.plumeHost.loadNote("b.md", B, 0, false);
   undo();
   check("cannot reach across a note switch", B, view.state.doc.toString());
   undo();
@@ -161,9 +161,9 @@ export function runUndo(view, doc) {
 
   // A summon starts a fresh sitting, so undo cannot reach back across a dismissal into a burst of
   // typing — which would take a note written in one go all the way back to empty.
-  window.paneHost.loadNote("a.md", A, 0, false);
+  window.plumeHost.loadNote("a.md", A, 0, false);
   view.dispatch({ changes: { from: 6, insert: " written in one burst" } });
-  window.paneHost.resetHistory();
+  window.plumeHost.resetHistory();
   undo();
   check("cannot reach back across a summon", "NOTE A written in one burst\n", view.state.doc.toString());
 
@@ -295,7 +295,7 @@ export function runRenumber(view, doc, bar) {
 
   // Opening somebody's note must not rewrite it. `loadNote` is how every note arrives, and a file
   // whose list says 1, 1, 1 is a file the user wrote that way.
-  window.paneHost.loadNote("keep.md", "1. a\n1. b\n1. c\n", 0, false);
+  window.plumeHost.loadNote("keep.md", "1. a\n1. b\n1. c\n", 0, false);
   check("opening a note renumbers nothing", "1. a\n1. b\n1. c\n");
 
   // --- nesting -------------------------------------------------------------------------------
@@ -314,7 +314,7 @@ export function runRenumber(view, doc, bar) {
   // --- undo, which is why this feature was pulled the first time ------------------------------
 
   const before = "1. a\n2. b\n3. c\n";
-  window.paneHost.loadNote("undo.md", before, 0, false);
+  window.plumeHost.loadNote("undo.md", before, 0, false);
   remove(0, 5);
   check("the edit and its renumbering land together", "1. b\n2. c\n");
   press("z", { meta: true });
@@ -490,7 +490,7 @@ export function runLayout(view, doc) {
     view.dispatch({ selection: { anchor: view.state.doc.length } });
     const line = lineEl(1);
     const box = line.getBoundingClientRect();
-    const marker = line.querySelector(".pane-list-marker");
+    const marker = line.querySelector(".plume-list-marker");
     const at = marker ? Math.round(marker.getBoundingClientRect().left - box.left) : null;
     check("a quoted bullet is drawn inside its own line, clear of the bar", true,
       at !== null && at > 2);
@@ -610,17 +610,17 @@ export function runTooltips(view, doc) {
     if (got !== want) failures.push({ case: `tooltip \u00b7 ${name}`, want, got });
   };
 
-  window.paneHost.applySettings({ shortcuts: {} });
+  window.plumeHost.applySettings({ shortcuts: {} });
   check("the switcher button prints its own key", "Notes \u2318P", label("#browse"));
   check("the actions button prints its own key", "Actions \u2318K", label("#open-actions"));
   check("the new-note button prints its own key", "New note \u2318N", label("#new-note"));
 
-  window.paneHost.applySettings({ shortcuts: { browseNotes: "Mod-o", actionPanel: "Alt-Mod-k" } });
+  window.plumeHost.applySettings({ shortcuts: { browseNotes: "Mod-o", actionPanel: "Alt-Mod-k" } });
   check("a rebound switcher key reaches the bubble", "Notes \u2318O", label("#browse"));
   check("and a chorded one renders every cap", "Actions \u2325\u2318K", label("#open-actions"));
   check("a key that was not rebound is left alone", "New note \u2318N", label("#new-note"));
 
-  window.paneHost.applySettings({ shortcuts: {} });
+  window.plumeHost.applySettings({ shortcuts: {} });
   check("restoring the defaults restores the bubble", "Notes \u2318P", label("#browse"));
 
   // The close button has no shortcut and must not grow one.
@@ -715,7 +715,7 @@ export function runStacking(view, bar, doc) {
  *     "- [ ] Hi" + Bulleted  ->  "[ ] Hi"      <- the destructive one: not a list at all any more
  *
  * Each of the first four is a list item whose *text* begins with something that looks like a marker,
- * so the pane drew both and the format bar lit both buttons — which is how it was reported, as the
+ * so the panel drew both and the format bar lit both buttons — which is how it was reported, as the
  * bullet button looking pressed on a numbered list. The button was telling the truth about a
  * document the commands had corrupted.
  *
@@ -947,9 +947,9 @@ export function runListKinds(view, doc, bar) {
   // --- switching an empty item's kind -----------------------------------------------------------
   //
   // Reported as an indent going weird: ⏎ in a bullet list leaves `- `, and Numbered turned it into
-  // a line the pane drew as literal text at the item's text column. The bytes were `- what\n1. `
-  // and pandoc reads them as two lists — **the pane's own parser does not**, because an empty item
-  // cannot interrupt the paragraph inside the item above, and the pane is the thing drawing. So the
+  // a line the panel drew as literal text at the item's text column. The bytes were `- what\n1. `
+  // and pandoc reads them as two lists — **the panel's own parser does not**, because an empty item
+  // cannot interrupt the paragraph inside the item above, and the panel is the thing drawing. So the
   // bytes have to be ones that cannot be read two ways.
   const kindSwap = (name, start, lineNumber, label, want) => {
     set(start);
@@ -1243,7 +1243,7 @@ export function runCaretToggles(view, doc, bar) {
   };
   const type = (text) => view.dispatch(view.state.replaceSelection(text));
   const load = (text, caret) => {
-    window.paneHost.loadNote("t.md", text, caret, false);
+    window.plumeHost.loadNote("t.md", text, caret, false);
     view.dispatch({ selection: { anchor: caret } });
   };
   const collapsed = () => view.state.selection.main.empty;
@@ -1313,8 +1313,8 @@ export function runFindSurvives(view, doc) {
   const sent = [];
   const host = (window.webkit ??= {});
   const handlers = (host.messageHandlers ??= {});
-  const real = handlers.pane;
-  handlers.pane = { postMessage: (m) => { sent.push(m); real?.postMessage?.(m); } };
+  const real = handlers.plume;
+  handlers.plume = { postMessage: (m) => { sent.push(m); real?.postMessage?.(m); } };
 
   const content = doc.querySelector(".cm-content");
   const input = doc.querySelector(".find__input");
@@ -1335,24 +1335,24 @@ export function runFindSurvives(view, doc) {
   };
 
   // A note switch with a match on screen: what ⌘N, ⌘P and an external reload all go through.
-  window.paneHost.loadNote("a.md", "one pass here\n", 0, false);
+  window.plumeHost.loadNote("a.md", "one pass here\n", 0, false);
   openFind("pass");
   check("the fixture really has a match", true, !!doc.querySelector(".cm-find-match"));
   check("loading a note over a match does not throw",
-    "ok", guarded(() => window.paneHost.loadNote("", "", 0, false)));
+    "ok", guarded(() => window.plumeHost.loadNote("", "", 0, false)));
   check("and the new note is the one on screen", "", view.state.doc.toString());
   check("and an edit after it still reaches Swift", true, editReachesSwift());
   closeFind();
 
   // Deleting a whole match by hand empties it the same way, with no note switch involved.
-  window.paneHost.loadNote("b.md", "one pass here\n", 0, false);
+  window.plumeHost.loadNote("b.md", "one pass here\n", 0, false);
   openFind("pass");
   check("deleting a whole match does not throw",
     "ok", guarded(() => view.dispatch({ changes: { from: 4, to: 8 } })));
   check("and the deletion happened", "one  here\n", view.state.doc.toString());
   closeFind();
 
-  handlers.pane = real;
+  handlers.plume = real;
   return { checked, failures };
 }
 
@@ -1360,13 +1360,13 @@ export function runFindSurvives(view, doc) {
  * ⌘-click follows a link — decision 138.
  *
  * The invariant this is really guarding is one sentence: **what opens is exactly what renders as
- * `.pane-link`.** So the first half asserts every form by hand, and the second half sweeps the
- * painted `.pane-link` spans and requires every one of them to open — which is the assertion that
+ * `.plume-link`.** So the first half asserts every form by hand, and the second half sweeps the
+ * painted `.plume-link` spans and requires every one of them to open — which is the assertion that
  * would have caught decision 121's empty-span fault a release early, and is the one that will fail
  * if a new construct is given the accent without being given the gesture.
  *
  * Asserted on the **message**, like the switcher's height cases: whether the browser actually opens
- * is `LinkTarget`'s question and is tested in PaneKit. What this owns is which text gets handed
+ * is `LinkTarget`'s question and is tested in PlumeKit. What this owns is which text gets handed
  * over, and from where.
  */
 export function runLinkOpening(view, doc) {
@@ -1381,13 +1381,13 @@ export function runLinkOpening(view, doc) {
   const sent = [];
   const host = (window.webkit ??= {});
   const handlers = (host.messageHandlers ??= {});
-  const real = handlers.pane;
-  handlers.pane = { postMessage: (m) => { sent.push(m); real?.postMessage?.(m); } };
+  const real = handlers.plume;
+  handlers.plume = { postMessage: (m) => { sent.push(m); real?.postMessage?.(m); } };
 
   const set = (text) => {
     view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: text } });
     // Park the caret clear of every link: the caret's own line goes raw (decision 57), which drops
-    // the `.pane-link` marks the sweep below counts.
+    // the `.plume-link` marks the sweep below counts.
     view.dispatch({ selection: { anchor: view.state.doc.length } });
   };
 
@@ -1476,7 +1476,7 @@ export function runLinkOpening(view, doc) {
 
   // The invariant, swept over what was actually painted rather than over the tree.
   {
-    const spans = [...view.contentDOM.querySelectorAll(".pane-link")];
+    const spans = [...view.contentDOM.querySelectorAll(".plume-link")];
     const missed = [];
     for (const span of spans) {
       const box = span.getBoundingClientRect();
@@ -1503,11 +1503,11 @@ export function runLinkOpening(view, doc) {
     // nothing. Same exception, honestly named.
     check("every painted link opens, bar the one with no target", "text[nope]", missed.join(", "));
     // Guards the sweep itself: if the accent stopped being painted, the loop above would pass by
-    // having nothing to do. Six constructs carry `.pane-link` in this fixture.
+    // having nothing to do. Six constructs carry `.plume-link` in this fixture.
     check("and the sweep had links to sweep", true, spans.length >= 9);
   }
 
-  handlers.pane = real;
+  handlers.plume = real;
   return { checked, failures };
 }
 
@@ -1518,7 +1518,7 @@ function runPanelOpacity(view, doc) {
     checked++;
     if (want !== got) failures.push({ case: `panel transparency: ${name}`, want, got });
   };
-  const host = window.paneHost;
+  const host = window.plumeHost;
   const probe = doc.createElement("div");
   probe.style.backgroundColor = "var(--panel-bg)";
   doc.body.append(probe);
@@ -1543,7 +1543,7 @@ function runPanelOpacity(view, doc) {
   check("original dark appearance", 0.6, alpha());
   host.applySettings({ panelOpacity: 0 });
   check("editor text stays opaque", "1", getComputedStyle(doc.querySelector(".cm-content")).opacity);
-  check("pane stays opaque", "1", getComputedStyle(doc.querySelector(".pane")).opacity);
+  check("plume stays opaque", "1", getComputedStyle(doc.querySelector(".plume")).opacity);
   host.applySettings({ appearance: "light", panelOpacity: 0.7 });
   probe.remove();
   return { checked, failures };
@@ -1563,7 +1563,7 @@ export function runAccentColours(view, doc) {
   accentProbe.style.color = "var(--accent)";
   doc.body.append(accentProbe);
   const accentColour = () => getComputedStyle(accentProbe).color;
-  const host = window.paneHost;
+  const host = window.plumeHost;
   host.applySettings({ appearance: "light", accent: "#8a570f", accentDark: "#e3b565" });
   check("accent: light tone", "rgb(138, 87, 15)", accentColour());
   host.applySettings({ appearance: "dark", accent: "#8a570f", accentDark: "#e3b565" });

@@ -4,7 +4,7 @@
 # the colon — the form CONTRIBUTING.md asks for and the history already uses:
 #
 #   feat(settings): ✨ Add adjustable panel opacity
-#   fix: the hotkey gives an unfocused pane the focus back
+#   fix: the hotkey gives an unfocused panel the focus back
 #
 # Usage:
 #   Scripts/check-commit-msg.sh <base> <head>   check every commit in base..head

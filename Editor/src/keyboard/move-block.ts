@@ -9,7 +9,7 @@
  * last sibling nothing happens. ⌃⌘↑ is the same key under the shortcut Raycast uses (39).
  *
  * ⇧⌥↑ and ⇧⌥↓ select to the block's start or end, as they do in macOS text; the default duplicated
- * the line. ⌘⌥↑ and ⌘⌥↓ added a second caret, which Pane does not keep, and parked the one it did
+ * the line. ⌘⌥↑ and ⌘⌥↓ added a second caret, which Plume does not keep, and parked the one it did
  * keep on the break; they now do nothing.
  */
 

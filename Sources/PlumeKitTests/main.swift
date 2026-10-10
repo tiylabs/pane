@@ -1,0 +1,26 @@
+import Foundation
+
+// The whole suite, run as an ordinary executable. See Harness.swift for why this is not XCTest.
+runNoteFilenameTests()
+runNoteNamingTests()
+runMarkdownDocumentTests()
+runNoteTitleCorpusTests()
+runNoteOrderingTests()
+runNoteIndexTests()
+runPanelGeometryTests()
+runPlumeWidthTests()
+runStateTests()
+runSettingsTests()
+runVaultSyncTests()
+runVaultIOTests()
+runRecentlyDeletedTests()
+runMarkdownExportTests()
+runAutoSizingTests()
+runReleaseCheckTests()
+runLinkTargetTests()
+runBuildProfileTests()
+runWelcomeNoteTests()
+runHotkeyPressTests()
+runLocalizationTests()
+
+exit(Check.finish())

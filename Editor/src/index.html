@@ -7,26 +7,26 @@
       WKWebView with no network access, so every byte it needs is inlined by the bundler. A <link> to a
       CDN would not merely be slow here — it would not resolve at all.
     -->
-    <title>Pane</title>
+    <title>Plume</title>
     <style>__STYLES__</style>
   </head>
   <body>
-    <div class="pane" id="pane" data-focused>
+    <div class="plume" id="plume" data-focused>
       <!--
         Title bar: one close dot, then the title (empty until you scroll past the H1), then exactly
         three buttons. Decision 22 fixes this list; anything new goes in ⌘K instead (decision 17).
       -->
-      <header class="pane__titlebar" id="titlebar">
+      <header class="plume__titlebar" id="titlebar">
         <!-- Three boxes: the dot, the title, the buttons. The two outer ones flex equally from a
              zero basis, so whatever space the title does not use is split evenly and the title
              lands on the *window's* centre rather than on the centre of the gap between a 12px dot
-             and a 116px button cluster. When the pane gets narrow the buttons stop giving ground
+             and a 116px button cluster. When the panel gets narrow the buttons stop giving ground
              and the title simply takes what is left — which is the whole point: reserving the
              cluster's width on both sides left 20px of title at the minimum width. -->
-        <div class="pane__titlebar-side">
-          <button class="pane__close" id="close" aria-label="Close pane" data-i18n-aria="editor.tip.close"></button>
+        <div class="plume__titlebar-side">
+          <button class="plume__close" id="close" aria-label="Close plume" data-i18n-aria="editor.tip.close"></button>
           <!-- Keep on top (the thumbtack). Window state owned by Swift and persisted in settings; off
-               by default. Faded like the other buttons until the pane is hovered — except while on,
+               by default. Faded like the other buttons until the panel is hovered — except while on,
                when it stays readable, as the note pin does. -->
           <button class="icon-button icon-button--sm" id="keep-on-top" data-action="keepOnTop" aria-label="Keep on top" aria-pressed="false">
             <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -36,14 +36,14 @@
           </button>
         </div>
 
-        <div class="pane__title" id="pane-title"></div>
+        <div class="plume__title" id="plume-title"></div>
 
-        <div class="pane__titlebar-side pane__titlebar-side--right">
+        <div class="plume__titlebar-side plume__titlebar-side--right">
 
-        <!-- The pin is STATE, not a permanent control: it is in the bar only while the pane is
+        <!-- The pin is STATE, not a permanent control: it is in the bar only while the panel is
              pinned, and clicking it there unpins. As a fourth always-present button it was the one
              icon in the title bar whose meaning nobody could read off it — decision 54. -->
-        <button class="icon-button" id="pin" data-action="pin" aria-label="Unpin pane" aria-pressed="false" title="Unpin ⇧⌘P">
+        <button class="icon-button" id="pin" data-action="pin" aria-label="Unpin plume" aria-pressed="false" title="Unpin ⇧⌘P">
           <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
             <circle class="pin-head" cx="7" cy="5" r="3" fill="none" stroke="currentColor" stroke-width="1.5" />
             <line class="pin-stem" x1="7" y1="8" x2="7" y2="13" stroke="currentColor" stroke-width="1.5" />
@@ -63,32 +63,32 @@
       <!--
         One line, above the content, for the three states the design record never drew: a conflict
         sibling was written (decision 8), a note is coming down from iCloud (decision 13), or
-        something went wrong. No button — decision 8 is explicit that the pane is never made
+        something went wrong. No button — decision 8 is explicit that the panel is never made
         read-only and that typing must not have to be resumed. It is dismissed by being fixed, or by
         clicking it.
       -->
       <!-- Transient confirmation for something destructive. Absolutely positioned on purpose:
            the banner below is in the layout and feeds `reportContentHeight`, so a message that
            comes and goes there would pulse the window (decision 44's hazard). This floats. -->
-      <div class="pane__toast" id="toast" role="status" aria-live="polite" hidden></div>
+      <div class="plume__toast" id="toast" role="status" aria-live="polite" hidden></div>
 
-      <div class="pane__banner" id="banner" role="status" hidden>
-        <span class="pane__banner-dot" aria-hidden="true"></span>
-        <span class="pane__banner-text" id="banner-text"></span>
+      <div class="plume__banner" id="banner" role="status" hidden>
+        <span class="plume__banner-dot" aria-hidden="true"></span>
+        <span class="plume__banner-text" id="banner-text"></span>
       </div>
 
-      <div class="pane__content">
-        <div class="pane__scroll" id="editor-host"></div>
+      <div class="plume__content">
+        <div class="plume__scroll" id="editor-host"></div>
       </div>
 
       <!-- One footer row. The format bar replaces it rather than stacking below it. -->
-      <footer class="pane__footer">
+      <footer class="plume__footer">
         <!-- The ⌘K hint that used to sit here is gone: the title bar carries a ⌘ button now
              (decision 54), which is the discovery path frame 2a traded away and then a better one
              than a word in a corner. -->
-        <span class="pane__footer-spacer"></span>
-        <span class="pane__words" id="word-count">0 words</span>
-        <span class="pane__footer-spacer"></span>
+        <span class="plume__footer-spacer"></span>
+        <span class="plume__words" id="word-count">0 words</span>
+        <span class="plume__footer-spacer"></span>
         <button class="icon-button icon-button--sm" id="format-toggle" aria-label="Formatting" title="Format ⌥⌘,">Aa</button>
       </footer>
 
@@ -97,11 +97,11 @@
       <!-- ⌘F. The third state of the footer row — see the note at the top of find.ts. -->
       <div class="find" id="find" role="search" aria-label="Find in note" data-i18n-aria="editor.aria.find"></div>
 
-      <!-- Everything the pane holds that is not the open overlay. Covers the whole pane, takes the
+      <!-- Everything the panel holds that is not the open overlay. Covers the whole panel, takes the
            click that would otherwise land in the note behind, and closes the overlay with it. -->
-      <div class="pane__scrim" id="overlay-scrim" aria-hidden="true"></div>
+      <div class="plume__scrim" id="overlay-scrim" aria-hidden="true"></div>
 
-      <!-- ⌘P. Lives inside the pane; see the note at the top of switcher.css. -->
+      <!-- ⌘P. Lives inside the panel; see the note at the top of switcher.css. -->
       <div class="switcher" id="switcher" role="dialog" aria-label="Browse notes" data-i18n-aria="editor.aria.browse">
         <input
           class="switcher__search"

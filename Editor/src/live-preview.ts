@@ -6,7 +6,7 @@
  * break, usually as cursor instability. If it feels janky the entire premise is gone."
  *
  * The contract, from decision 5: the buffer IS the markdown. Everything here is a view-only
- * decoration. Nothing in this file may change a single byte of the document, which is what lets Pane
+ * decoration. Nothing in this file may change a single byte of the document, which is what lets Plume
  * promise a byte-for-byte round trip.
  *
  * WHAT HAPPENS ON THE ACTIVE LINE. Inline constructs go fully raw — the markers reappear and the
@@ -120,7 +120,7 @@ function atomsOf(decorations: DecorationSet): DecorationSet {
  * Two guards. `posAtCoords` is asked for a *precise* hit, so a click in the empty space below the
  * note returns null and falls through to CodeMirror — otherwise a note ending in a blank line
  * would swallow the most ordinary click there is. And an unfocused editor always lets the click
- * through, because handling it would leave the pane unfocusable by clicking in the wrong spot.
+ * through, because handling it would leave the panel unfocusable by clicking in the wrong spot.
  */
 const blankLineClickHandler = EditorView.domEventHandlers({
   mousedown(event, view) {
@@ -151,12 +151,12 @@ const blankLineClickHandler = EditorView.domEventHandlers({
 /**
  * The target a ⌘-click at this position should open, or null — decision 138.
  *
- * **The rule is: what opens is exactly what renders as `.pane-link`.** Not a second opinion about
+ * **The rule is: what opens is exactly what renders as `.plume-link`.** Not a second opinion about
  * what a link is, because two implementations of one question is decision 100's fault, and the
  * question was already answered a release ago by decision 121's guard a few hundred lines up. So
  * this walks the same tree and honours the same three exclusions:
  *
- * - a `URL` inside an `Image` is **literal text**, not a link — Pane does not interpret images, so
+ * - a `URL` inside an `Image` is **literal text**, not a link — Plume does not interpret images, so
  *   `![alt](url)` renders every character of itself and nothing there is clickable;
  * - everything else that got the accent — `[label](target)`, `<https://x>`, a bare `https://`,
  *   `www.` or address, and the target half of a `[ref]: target` definition — opens.
@@ -168,7 +168,7 @@ const blankLineClickHandler = EditorView.domEventHandlers({
  * what issues #1 and #2 were both about. So the definition is looked up instead.
  *
  * What it returns is the raw text of the node. Whether that text may be *opened* is
- * `LinkTarget.resolve`'s question, in PaneKit, where it can be tested.
+ * `LinkTarget.resolve`'s question, in PlumeKit, where it can be tested.
  */
 export function linkTargetAt(state: EditorState, pos: number): string | null {
   const text = (from: number, to: number) => state.doc.sliceString(from, to);
@@ -247,11 +247,11 @@ function referenceTarget(state: EditorState, link: SyntaxNode): string | null {
  * The gesture is the reference's, measured rather than assumed: Raycast Notes opens the browser on
  * ⌘-click, does nothing on hover, and shows a link popover on a *plain* click — the third of those
  * is deliberately not copied, because its Edit link / Unlink actions only mean something in an
- * editor whose links are nodes with an href. Pane's link is text (decision 5), so there is nothing
+ * editor whose links are nodes with an href. Plume's link is text (decision 5), so there is nothing
  * to unlink, and a popover would be new chrome against decision 22 besides.
  *
  * No hover affordance, for the same reason it was not worth building: the page receives no
- * `mousemove` in Pane's real configuration (decision 120) and Swift's `setPointer` carries no
+ * `mousemove` in Plume's real configuration (decision 120) and Swift's `setPointer` carries no
  * modifier state, so lighting a link under a held ⌘ would mean extending that channel. The
  * reference does nothing on hover either.
  *
@@ -282,10 +282,10 @@ const linkClickHandler = (open: (target: string) => void) =>
 const taskClickHandler = EditorView.domEventHandlers({
   mousedown(event, view) {
     const target = event.target as HTMLElement | null;
-    const marker = target?.closest?.("[data-pane-task]") as HTMLElement | null;
+    const marker = target?.closest?.("[data-plume-task]") as HTMLElement | null;
     if (!marker) return false;
 
-    const pos = Number(marker.dataset.paneTask);
+    const pos = Number(marker.dataset.plumeTask);
     if (!Number.isFinite(pos)) return false;
 
     const current = view.state.doc.sliceString(pos, pos + 3);
@@ -302,14 +302,14 @@ const taskClickHandler = EditorView.domEventHandlers({
  *
  * The caret's blank line is exempt from the collapse above, so that typing the first character moves
  * nothing. That exemption is a *rendering* choice and the window must not follow it: without this,
- * arrowing across the blank lines of a short note grows and shrinks the pane by 12px each time,
+ * arrowing across the blank lines of a short note grows and shrinks the panel by 12px each time,
  * because every height decision goes through the content height the web layer reports (decision 40).
- * The pane would pulse for the whole length of a note.
+ * The panel would pulse for the whole length of a note.
  *
  * So the height that goes to Swift is reported as though the caret's line were still collapsed.
- * Content below the caret still opens and closes inside the pane, which is what the exemption is
+ * Content below the caret still opens and closes inside the panel, which is what the exemption is
  * for; the window simply does not chase it. The cost is that while the caret sits on a blank line
- * the note is 12px taller than the pane admits, so a note filling the pane exactly can put its last
+ * the note is 12px taller than the panel admits, so a note filling the panel exactly can put its last
  * line under the fade until the caret moves — much cheaper than a window that breathes.
  *
  * Lives here rather than in the reporter because the rule that creates the slack is the rule that
@@ -348,7 +348,7 @@ export function caretBlankLineSlack(view: EditorView): number {
  * measured in the probe, ours is `display: block` at y=202..220 with the document selected.
  *
  * `every`, not `some`: a mixed multi-range selection keeps the carets belonging to its empty ranges,
- * which is what AppKit does too. Pane has no multi-cursor UI today, so in practice this reads "the
+ * which is what AppKit does too. Plume has no multi-cursor UI today, so in practice this reads "the
  * selection is not collapsed" — written for the general case because the narrow one is free.
  *
  * An attribute rather than a class on the content, because the cursor layer is a sibling of

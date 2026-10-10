@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+> This project is a fork of [ColeMei/pane](https://github.com/ColeMei/pane), forked from upstream
+> commit `526dda4` (2026-10-10). Changes made before that commit belong to the upstream project and
+> are recorded in its history, not in this file. The entries below cover this fork only. The project was renamed from Pane to Plume after v0.3.1075;
+> the older entries and their links still use the former name and repository path `tiylabs/pane`.
+
 ## [v0.3.1075] - 2026-10-10
 ### :sparkles: New Features
 - [`09d69c7`](https://github.com/tiylabs/pane/commit/09d69c75f0046a33bfe5edfa81b2217054612a4b) - **ui**: ✨ Add Liquid Glass panel material on macOS 26 *(commit by [@jorben](https://github.com/jorben))*

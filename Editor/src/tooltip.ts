@@ -1,12 +1,12 @@
 /*
  * The little bubble that names a control, and the shortcut for it.
  *
- * One implementation for every button in the pane — title bar, footer, format bar. It started in the
+ * One implementation for every button in the panel — title bar, footer, format bar. It started in the
  * format bar (decision 58) and stayed there for one build, which immediately read as two vocabularies
- * in one window: the format bar answered instantly in the pane's own material while the icons six
+ * in one window: the format bar answered instantly in the panel's own material while the icons six
  * inches above it waited a second and answered in the system's yellow.
  *
- * One element for the whole pane rather than one per button: it is only ever showing one thing, and a
+ * One element for the whole panel rather than one per button: it is only ever showing one thing, and a
  * dozen hidden divs is a dozen things to keep positioned. Absolutely positioned, out of the flow —
  * the title bar's and footer's heights feed `reportContentHeight`, so a bubble that took part in
  * layout would resize the window every time the pointer crossed a button (decision 41).
@@ -31,7 +31,7 @@
 const SHOW_DELAY_MS = 800;
 
 let tip: HTMLElement | null = null;
-let pane: HTMLElement | null = null;
+let plume: HTMLElement | null = null;
 /** Whose name is on screen, so a pointer that never crosses back out can still be noticed. */
 let named: HTMLElement | null = null;
 
@@ -90,12 +90,12 @@ function escapeHtml(text: string): string {
   );
 }
 
-export function mountTooltips(paneEl: HTMLElement): void {
-  pane = paneEl;
+export function mountTooltips(plumeEl: HTMLElement): void {
+  plume = plumeEl;
   tip = document.createElement("div");
-  tip.className = "pane__tip";
+  tip.className = "plume__tip";
   tip.hidden = true;
-  paneEl.appendChild(tip);
+  plumeEl.appendChild(tip);
 
   /*
    * `mouseleave` is not enough to take a tooltip down, and the bubble that will not go away is far
@@ -123,7 +123,7 @@ export function mountTooltips(paneEl: HTMLElement): void {
   /*
    * Anything carrying `data-tip`, without a listener of its own.
    *
-   * `describe` attaches to one element, which is right for the pane's fixed chrome and useless for
+   * `describe` attaches to one element, which is right for the panel's fixed chrome and useless for
    * the switcher's rows: they are rebuilt from `innerHTML` on every keystroke, so any listener
    * attached to a row dies with it. Those buttons had `title` instead — the system's yellow bubble,
    * a second late — which is precisely the inconsistency decision 58 set out to remove and then
@@ -135,7 +135,7 @@ export function mountTooltips(paneEl: HTMLElement): void {
   });
 
   document.addEventListener("keydown", hideTooltip, true);
-  paneEl.addEventListener("mouseleave", hideTooltip);
+  plumeEl.addEventListener("mouseleave", hideTooltip);
   // The pointer leaving the document — which in a WKWebView means leaving the window — arrives as a
   // mouseout with nothing to enter, and as a window blur when it lands in another app.
   document.addEventListener("mouseout", (event) => {
@@ -146,7 +146,7 @@ export function mountTooltips(paneEl: HTMLElement): void {
   /*
    * And a watchdog, because none of the above is guaranteed to arrive.
    *
-   * The pane is a window with a transparent AppKit view over its title bar (the drag regions), so a
+   * The panel is a window with a transparent AppKit view over its title bar (the drag regions), so a
    * pointer moving off a title-bar button into the strip beside it stops producing events in the
    * page entirely — the web layer's last word on the subject is "still hovering", and the bubble
    * stayed up until something else happened to move. `:hover` is the engine's own answer rather than
@@ -156,12 +156,12 @@ export function mountTooltips(paneEl: HTMLElement): void {
     // "The engine has no opinion" is not "the engine says no". With the pointer outside the window
     // nothing in the document matches `:hover` at all, and reading that as "the pointer left the
     // button" makes this poll fire constantly against a state it cannot see. The pointer genuinely
-    // leaving the pane is already covered — `mouseleave` on the pane, and Swift's `setHover(false)`,
-    // which exists because the pane is a window and not a page.
-    // Nothing matches `:hover` when the page gets no mouse events, which is Pane's normal state
+    // leaving the panel is already covered — `mouseleave` on the panel, and Swift's `setHover(false)`,
+    // which exists because the panel is a window and not a page.
+    // Nothing matches `:hover` when the page gets no mouse events, which is Plume's normal state
     // (decision 120) — and reading that as "the pointer left" would tear down every bubble Swift
     // raises, a quarter-second after it appears. The pointer genuinely leaving is covered by
-    // `setPointer` finding no control under it, by `mouseleave` on the pane, and by `setHover(false)`.
+    // `setPointer` finding no control under it, by `mouseleave` on the panel, and by `setHover(false)`.
     if (!document.querySelector(":hover")) return;
     if (named && !named.matches(":hover")) hideTooltip();
     if (pendingEl && !pendingEl.matches(":hover")) cancelPending();
@@ -169,15 +169,15 @@ export function mountTooltips(paneEl: HTMLElement): void {
 }
 
 /** Takes the bubble down. Also called from Swift's `setHover(false)` — the pointer can leave the
- *  pane without the page hearing about it, because the pane is a window and not a page. */
+ *  panel without the page hearing about it, because the panel is a window and not a page. */
 /**
  * Where Swift says the pointer is, in page coordinates — the only reliable answer there is.
  *
  * Decision 120. Everything below this line used to run off `mouseenter`, `mouseover` and a `:hover`
- * watchdog, and **none of that fires in the configuration the pane is built for**: an accessory
+ * watchdog, and **none of that fires in the configuration the panel is built for**: an accessory
  * app's non-activating panel that has not been clicked receives no mouse events at all (decision 107
  * measured zero, against 22 in a controlled key window). So the bubble only ever appeared after you
- * had clicked the pane — and clicking the pane is the thing the product exists to avoid.
+ * had clicked the panel — and clicking the panel is the thing the product exists to avoid.
  *
  * Swift already reads the pointer for `setHover` and the close dot. This is the same read, handed
  * over, and `elementFromPoint` turns it into the control underneath. The page's own events are left
@@ -188,7 +188,7 @@ export function mountTooltips(paneEl: HTMLElement): void {
  * Marks the control the pointer is over, so CSS has something to key off.
  *
  * `:hover` cannot do it, for the reason decision 107 measured and this file's `setPointer` note
- * repeats: the page receives no mouse events in the configuration the pane is built for. The dot got
+ * repeats: the page receives no mouse events in the configuration the panel is built for. The dot got
  * `[data-close-hover]` and every other control was left on `:hover`, so the title bar, the format
  * bar, the find bar and the switcher's row actions all sat inert under the pointer — the bubble named
  * them and the button underneath it never lit.
@@ -207,7 +207,7 @@ function light(target: HTMLElement | null): void {
 
 export function setPointer(x: number, y: number): void {
   const el = document.elementFromPoint(x, y) as HTMLElement | null;
-  const target = el?.closest?.<HTMLElement>("[data-tip], [data-pane-described]") ?? null;
+  const target = el?.closest?.<HTMLElement>("[data-tip], [data-plume-described]") ?? null;
   light(target);
   if (!target) {
     // Off every control, which is also the "moved away" signal — the mousemove listener cannot see
@@ -229,24 +229,24 @@ export function hideTooltip(): void {
 
 /** Puts the bubble over one control. Shared by `describe` and the `data-tip` delegation above. */
 function showFor(button: HTMLElement, text: string): void {
-  if (!tip || !pane || !text) return;
+  if (!tip || !plume || !text) return;
   named = button;
   const { name, keys } = parse(text);
   tip.innerHTML = keys ? `${escapeHtml(name)}<kbd>${escapeHtml(keys)}</kbd>` : escapeHtml(name);
   tip.hidden = false;
 
-  const paneBox = pane.getBoundingClientRect();
+  const plumeBox = plume.getBoundingClientRect();
   const box = button.getBoundingClientRect();
-  // Below a control in the top half of the pane, above one in the bottom half — so the bubble
+  // Below a control in the top half of the panel, above one in the bottom half — so the bubble
   // never covers the thing it is naming, wherever that thing lives.
-  const below = box.top - paneBox.top < paneBox.height / 2;
+  const below = box.top - plumeBox.top < plumeBox.height / 2;
   tip.style.top = below
-    ? `${box.bottom - paneBox.top + 6}px`
-    : `${box.top - paneBox.top - tip.offsetHeight - 6}px`;
+    ? `${box.bottom - plumeBox.top + 6}px`
+    : `${box.top - plumeBox.top - tip.offsetHeight - 6}px`;
 
   const half = tip.offsetWidth / 2;
-  const centre = box.left - paneBox.left + box.width / 2;
-  tip.style.left = `${Math.min(Math.max(centre, half + 8), paneBox.width - half - 8)}px`;
+  const centre = box.left - plumeBox.left + box.width / 2;
+  tip.style.left = `${Math.min(Math.max(centre, half + 8), plumeBox.width - half - 8)}px`;
 }
 
 /**
@@ -266,9 +266,9 @@ export function describe(button: HTMLElement, text: string): void {
   // would leave the *first* set still showing the old string from its own closure — a button whose
   // bubble says ⌘P on one hover and ⌘O on the next. So the listeners go on once and read the label
   // at hover time rather than capturing it.
-  if (button.dataset.paneDescribed) return;
-  button.dataset.paneDescribed = "1";
-  button.setAttribute("data-pane-described", "");
+  if (button.dataset.plumeDescribed) return;
+  button.dataset.plumeDescribed = "1";
+  button.setAttribute("data-plume-described", "");
 
   const label = () => tipText(button);
   const hide = () => hideTooltip();
