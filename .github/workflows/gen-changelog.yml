@@ -1,0 +1,68 @@
+name: Update changelog
+
+# Runs when a stable release tag (vX.Y.Z) is pushed. Prerelease tags such as v0.3.1075-rc.0 do not
+# match the glob below, so release candidates never produce a changelog PR.
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+  workflow_dispatch:
+    inputs:
+      release_version:
+        description: "Release tag (e.g. v0.2.1075)"
+        required: true
+        default: "v0.2.1075"
+
+jobs:
+  changelog:
+    runs-on: ubuntu-latest
+
+    env:
+      # A tag push uses the pushed tag; a manual run uses the tag typed into the form.
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.release_version || github.ref_name }}
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ env.RELEASE_TAG }}
+
+      - name: Find previous stable tag
+        id: prev_tag
+        run: |
+          # List all tags matching vX.Y.Z (no -rc suffix), newest first, drop the current tag,
+          # and take the first remaining one as the previous stable tag.
+          PREV_TAG=$(git tag -l --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | grep -vxF "${RELEASE_TAG}" | head -n 1 || true)
+          echo "prev_tag=${PREV_TAG}" >> "$GITHUB_OUTPUT"
+          echo "Current tag: ${RELEASE_TAG}, Previous stable tag: ${PREV_TAG}"
+          if [ -z "${PREV_TAG}" ]; then
+            echo "::error::No previous stable tag found for ${RELEASE_TAG}; nothing to compare against."
+            exit 1
+          fi
+
+      - name: Update CHANGELOG
+        id: changelog
+        uses: requarks/changelog-action@v1.10.3
+        with:
+          token: ${{ github.token }}
+          fromTag: ${{ env.RELEASE_TAG }}
+          toTag: ${{ steps.prev_tag.outputs.prev_tag }}
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          # A PAT (not GITHUB_TOKEN) so the PR can trigger CI workflows.
+          token: ${{ secrets.PAT_TOKEN }}
+          commit-message: "docs: 📝 update CHANGELOG.md for ${{ env.RELEASE_TAG }}"
+          title: "docs: 📝 update CHANGELOG.md for ${{ env.RELEASE_TAG }}"
+          body: |
+            Auto-generated changelog update for release ${{ env.RELEASE_TAG }}.
+            Comparing changes from `${{ steps.prev_tag.outputs.prev_tag }}` to `${{ env.RELEASE_TAG }}`.
+
+            This PR was automatically created by the changelog workflow.
+          branch: changelog/${{ env.RELEASE_TAG }}
+          base: master
+          add-paths: CHANGELOG.md
+          labels: documentation,automated
+          delete-branch: true
