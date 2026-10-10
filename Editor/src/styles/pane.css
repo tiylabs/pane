@@ -52,6 +52,7 @@ body {
   flex-direction: column;
   height: 100vh;
   background: var(--panel-bg);
+  transition: background-color 160ms ease-out;
   -webkit-backdrop-filter: var(--panel-blur);
   backdrop-filter: var(--panel-blur);
   /* The window itself is borderless and transparent; the rounding and hairline live here so the

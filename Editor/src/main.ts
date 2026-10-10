@@ -1103,6 +1103,7 @@ const host = {
     accentDark?: string;
     textSize?: number;
     panelOpacity?: number;
+    glass?: boolean;
     themeCSS?: string;
     shortcuts?: Record<string, string>;
     footerCount?: string;
@@ -1121,9 +1122,19 @@ const host = {
       const opacity = Math.min(1, Math.max(0, settings.panelOpacity));
       root.setAttribute("data-vibrancy", opacity < 1 ? "on" : "off");
       root.style.setProperty("--panel-opacity", String(opacity));
+      // Liquid Glass scrim, cubic so the slider has real range. Unfocused is the base; focused is
+      // lifted toward opaque so a pane you are reading or editing is the deeper one. At the fully
+      // transparent end the unfocused pane is bare glass and the focused one keeps a light wash.
+      const base = opacity ** 3;
+      root.style.setProperty("--panel-glass-alpha", String(base));
+      root.style.setProperty("--panel-glass-alpha-focus", String(base + (1 - base) * 0.3));
       // Preserve the original dark scrim (60% at the default 70% light opacity),
       // while both themes reach fully transparent and fully opaque at the endpoints.
       root.style.setProperty("--panel-opacity-dark", String(Math.max(0, opacity - (1 - opacity) / 3)));
+    }
+    if (settings.glass !== undefined) {
+      if (settings.glass) root.setAttribute("data-material", "glass");
+      else root.removeAttribute("data-material");
     }
     if (settings.textSize) root.style.setProperty("--text-size", `${settings.textSize}px`);
     if (settings.accent) {

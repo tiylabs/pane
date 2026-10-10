@@ -329,7 +329,7 @@ final class PaneController: NSObject {
         // next report keeps the first frame the user sees the right size.
         applyContentHeight(heightWanted)
 
-        editor.call("setFocused", [true])
+        editor.setFocused(true)
         // A summon is a new sitting with the note, and undo belongs to the sitting — see
         // `resetHistory`. Without it ⌘Z reaches back across the dismissal and can empty a note that
         // was written in one burst.
@@ -372,7 +372,7 @@ final class PaneController: NSObject {
         unsettledName = nil
         rememberFrame()
         panel.dismiss()
-        editor.call("setFocused", [false])
+        editor.setFocused(false)
         stopTrackingResizeEdge()
 
         // Hands the front back to whatever was there. Summoning never activated the app — measured:
@@ -1370,6 +1370,9 @@ final class PaneController: NSObject {
 
     func applySettings() {
         editor.panelOpacity = settings.value.panelOpacity
+        // A borderless transparent window's shadow is cast by its rectangular backing, so over glass
+        // it showed as a square black frame around the rounded pane. Glass has its own edge.
+        panel.hasShadow = !editor.usesGlass
         panel.showsOnEverySpace = settings.value.showOnEverySpace
         applyHiddenFromCapture()
         // Not a setting — pane state — but this runs on `ready`, which is the one moment the web
@@ -1391,6 +1394,7 @@ final class PaneController: NSObject {
                 "textSize": settings.value.textSize,
                 "footerCount": settings.value.footerCount.rawValue,
                 "panelOpacity": settings.value.panelOpacity,
+                "glass": editor.usesGlass,
                 "shortcuts": settings.value.shortcuts,
                 // Decision 19: a theme is a CSS file, so what crosses the bridge is the file's
                 // contents. Read here rather than fetched by the web layer — the page is loaded from
@@ -1880,11 +1884,11 @@ extension PaneController: NSWindowDelegate {
     }
 
     func windowDidBecomeKey(_ notification: Notification) {
-        editor.call("setFocused", [true])
+        editor.setFocused(true)
     }
 
     func windowDidResignKey(_ notification: Notification) {
-        editor.call("setFocused", [false])
+        editor.setFocused(false)
         // Decision 10's second immediate flush. Clicking away from the pane is exactly the moment a
         // half-typed thought must already be on disk.
         flush(trigger: .lostFocus)

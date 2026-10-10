@@ -180,7 +180,11 @@ final class EditorWebView: NSView {
     weak var delegate: (any EditorWebViewDelegate)?
 
     let webView: WKWebView
-    private let material = NSVisualEffectView()
+    /// The surface behind the web view: Liquid Glass on macOS 26+, an `NSVisualEffectView` before it.
+    private let material: NSView
+    /// Whether `material` is Liquid Glass. The web layer is told, because glass wants a much lighter
+    /// scrim than the classic material (see `data-material="glass"` in `tokens.css`).
+    let usesGlass: Bool
     private let dragOverlay = DragOverlayView()
 
     /// The close dot, **top-left origin in CSS pixels**, exactly as the web layer measured it.
@@ -205,6 +209,7 @@ final class EditorWebView: NSView {
         configuration.suppressesIncrementalRendering = false
 
         webView = ClickThroughWebView(frame: frameRect, configuration: configuration)
+        (material, usesGlass) = Self.makeMaterial()
         super.init(frame: frameRect)
 
         configuration.userContentController.add(bridge, name: "pane")
@@ -236,18 +241,57 @@ final class EditorWebView: NSView {
         // desaturates the material whenever the owning app is not frontmost — and Pane's whole
         // premise is being usable while another app is frontmost, so the default would make the pane
         // change appearance exactly when it is doing its job.
-        material.blendingMode = .behindWindow
-        material.state = .active
-        material.material = .popover
-        material.wantsLayer = true
-        material.layer?.cornerRadius = Self.cornerRadius
-        material.layer?.masksToBounds = true
         addSubview(material)
 
-        addSubview(webView)
+        // Glass is designed to wrap its content: it masks, refracts and sizes itself around
+        // `contentView`. Left as a bare sibling underneath the web view it rendered as a clear sheet
+        // with no blur and square corners.
+        if #available(macOS 26, *), let glass = material as? NSGlassEffectView {
+            glass.contentView = webView
+        } else {
+            addSubview(webView)
+        }
         // Above the web view, and transparent to every click except the ones in the title bar's
         // empty space.
         addSubview(dragOverlay)
+    }
+
+    /// Key state drives the glass, not just the page. Measured on a real panel at 0% opacity: out of
+    /// key the system renders `.clear` glass as a deep frosted slab; in key it renders it as bare
+    /// refraction with the wallpaper fully legible through the text — the opposite of what a pane you
+    /// are about to read or type in needs. So the focused pane takes `.regular` (frosted, deeper) and
+    /// the unfocused one `.clear`, and the page scrim deepens on top (`data-focused` in tokens.css).
+    func setFocused(_ focused: Bool) {
+        call("setFocused", [focused])
+        guard usesGlass, #available(macOS 26, *), let glass = material as? NSGlassEffectView else { return }
+        if UserDefaults.standard.string(forKey: "PaneMaterial") != nil { return }
+        glass.style = focused ? .regular : .clear
+    }
+
+    /// Material choice, prototype switch: `defaults write <bundle id> PaneMaterial classic|regular`.
+    /// Unset means clear glass on macOS 26+.
+    ///
+    /// **Clear, not regular.** Measured side by side: `.regular` washes the wallpaper toward white
+    /// (light) or near-black (dark) on its own, so even with no scrim the pane looked like frosted
+    /// paper and the dark theme could never get past a dark slab. `.clear` keeps the wallpaper's
+    /// colour, which is what the system widgets show; legibility then comes from the page's scrim,
+    /// i.e. the transparency slider.
+    private static func makeMaterial() -> (NSView, Bool) {
+        let choice = UserDefaults.standard.string(forKey: "PaneMaterial")
+        if #available(macOS 26, *), choice != "classic" {
+            let glass = NSGlassEffectView()
+            glass.style = choice == "regular" ? .regular : .clear
+            glass.cornerRadius = cornerRadius
+            return (glass, true)
+        }
+        let effect = NSVisualEffectView()
+        effect.blendingMode = .behindWindow
+        effect.state = .active
+        effect.material = .popover
+        effect.wantsLayer = true
+        effect.layer?.cornerRadius = cornerRadius
+        effect.layer?.masksToBounds = true
+        return (effect, false)
     }
 
     /// Matches `--radius-panel` in `tokens.css`. The web layer still draws the hairline border and
@@ -257,8 +301,15 @@ final class EditorWebView: NSView {
     /// Fade only the background material; the web view's text and controls keep their opacity.
     var panelOpacity: Double = Settings.defaultPanelOpacity {
         didSet {
-            material.isHidden = panelOpacity >= 1 || panelOpacity <= 0
-            material.alphaValue = min(1, max(0, panelOpacity / Settings.defaultPanelOpacity))
+            if usesGlass {
+                // Never hidden: the web view is the glass's `contentView`, so hiding the glass hides
+                // the page. Full opacity is the page painting a solid fill over it instead, and the
+                // slider is carried entirely by the page's scrim (`--panel-glass-alpha`).
+                material.alphaValue = 1
+            } else {
+                material.isHidden = panelOpacity >= 1 || panelOpacity <= 0
+                material.alphaValue = min(1, max(0, panelOpacity / Settings.defaultPanelOpacity))
+            }
         }
     }
 

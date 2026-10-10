@@ -368,6 +368,33 @@
   --panel-bg: rgba(30, 30, 34, var(--panel-opacity-dark, 0.6));
 }
 
+/* Liquid Glass (macOS 26): the glass already carries its own tint, refraction and highlight, so the
+ * page contributes only a scrim for legibility.
+ *
+ * The scrim follows key state, which the glass itself does not (measured: the same clear glass
+ * renders identically in and out of key). A pane you are reading or editing gets the deeper
+ * `--panel-glass-alpha-focus`; one you have clicked away from relaxes to `--panel-glass-alpha` and
+ * lets the wallpaper through. Both are set from the slider in `applySettings`. The rule that paints
+ * it is `.pane` in pane.css, which reads these. */
+:root[data-vibrancy="on"][data-material="glass"] {
+  --panel-scrim-rgb: 247, 247, 249;
+  --panel-bg: rgba(var(--panel-scrim-rgb), var(--panel-glass-alpha, 0.2));
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-vibrancy="on"][data-material="glass"]:not([data-appearance="light"]) {
+    --panel-scrim-rgb: 30, 30, 34;
+  }
+}
+
+:root[data-vibrancy="on"][data-material="glass"][data-appearance="dark"] {
+  --panel-scrim-rgb: 30, 30, 34;
+}
+
+:root[data-vibrancy="on"][data-material="glass"] .pane[data-focused] {
+  --panel-bg: rgba(var(--panel-scrim-rgb), var(--panel-glass-alpha-focus, 0.4));
+}
+
 /* At full opacity the material is hidden, matching the design's flat-background fallbacks. */
 :root[data-vibrancy="off"] {
   --panel-blur: none;
