@@ -8,8 +8,10 @@
 # drifting in a repo nobody opens.
 
 cask "pane" do
-  version "0.7.2"
-  sha256 "2e02341e2fdc23153c077f6b9e2481f08730edad9ef0543a4bc2db138041d2e4"
+  # Placeholders: the release workflow overwrites both values when it publishes to the tap, so they
+  # are never the current release. Do not bump them by hand.
+  version "0.0.0"
+  sha256 "0000000000000000000000000000000000000000000000000000000000000000"
 
   url "https://github.com/tiylabs/pane/releases/download/v#{version}/Pane-#{version}.dmg"
   name "Pane"
