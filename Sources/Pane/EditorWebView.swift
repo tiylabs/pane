@@ -186,6 +186,9 @@ final class EditorWebView: NSView {
     let webView: WKWebView
     /// The surface behind the web view: Liquid Glass on macOS 26+, an `NSVisualEffectView` before it.
     private let material: NSView
+    /// Rounded clip around `material` on macOS 27 only; see the comment where it is installed.
+    private let glassClip = NSView()
+    private static let glassOverscan: CGFloat = 8
     /// Whether `material` is Liquid Glass. The web layer is told, because glass wants a much lighter
     /// scrim than the classic material (see `data-material="glass"` in `tokens.css`).
     let usesGlass: Bool
@@ -245,19 +248,39 @@ final class EditorWebView: NSView {
         // desaturates the material whenever the owning app is not frontmost — and Pane's whole
         // premise is being usable while another app is frontmost, so the default would make the pane
         // change appearance exactly when it is doing its job.
-        addSubview(material)
-
+        //
         // Glass is designed to wrap its content: it masks, refracts and sizes itself around
         // `contentView`. Left as a bare sibling underneath the web view it rendered as a clear sheet
         // with no blur and square corners.
-        if #available(macOS 26, *), let glass = material as? NSGlassEffectView {
+        if #available(macOS 27, *), usesGlass, let glass = material as? NSGlassEffectView {
+            // The exception, on macOS 27, where the unfocused glass is the private clear variant (see
+            // `applyGlassStyle`). That variant draws a bright highlight along its whole edge, far
+            // brighter than the widgets', and it is part of the glass rather than something a property
+            // reaches. So the glass is made `glassOverscan` larger than the pane on every side and
+            // clipped back by a rounded container: the highlight lands outside the window. Measured,
+            // the top and bottom edges drop back to the wallpaper's own brightness, the lens
+            // refraction stays, and the focused look is unchanged. With the glass no longer wrapping
+            // the web view, the square-corner problem above is the container's mask.
+            glassClip.wantsLayer = true
+            glassClip.layer?.cornerRadius = Self.cornerRadius
+            glassClip.layer?.masksToBounds = true
+            glass.cornerRadius = Self.cornerRadius + Self.glassOverscan
+            glassClip.addSubview(glass)
+            addSubview(glassClip)
+            addSubview(webView)
+        } else if #available(macOS 26, *), let glass = material as? NSGlassEffectView {
+            addSubview(material)
             glass.contentView = webView
         } else {
+            addSubview(material)
             addSubview(webView)
         }
         // Above the web view, and transparent to every click except the ones in the title bar's
         // empty space.
         addSubview(dragOverlay)
+
+        // The pane starts unfocused, but nothing tells it so until the first key change.
+        applyGlassStyle(focused: false)
     }
 
     /// Key state drives the glass, not just the page. Measured on a real panel at 0% opacity: out of
@@ -283,10 +306,30 @@ final class EditorWebView: NSView {
     private func applyFocusedLook() {
         let focused = keyFocused || holdsFocusedLook
         call("setFocused", [focused])
+        applyGlassStyle(focused: focused)
+    }
+
+    /// Focused is frosted (`.regular`: the note is being read or typed in, so the wallpaper is held
+    /// back); unfocused is the clear, refracting look of the system widgets.
+    ///
+    /// The unfocused half cannot be had from public API. AppKit renders every `NSGlassEffectView` in a
+    /// non-key window as a frosted slab whatever its `style` — measured on macOS 27 — while the
+    /// widgets keep their clear glass out of key. `_variant` 11 is a clear, refracting glass that does
+    /// not follow key state. It is private: if a later release renumbers it, the pane falls back to
+    /// the frosted slab rather than failing. It is also sharper than the widgets, which blur their
+    /// backdrop a little; nothing found yet reproduces that.
+    ///
+    /// Setting `style` resets `_variant`, so the variant has to be set after it, every time.
+    private func applyGlassStyle(focused: Bool) {
         guard usesGlass, #available(macOS 26, *), let glass = material as? NSGlassEffectView else { return }
         if UserDefaults.standard.string(forKey: "PaneMaterial") != nil { return }
         glass.style = focused ? .regular : .clear
+        if !focused, #available(macOS 27, *), glass.responds(to: NSSelectorFromString("set_variant:")) {
+            glass.setValue(Self.unfocusedGlassVariant, forKey: "_variant")
+        }
     }
+
+    private static let unfocusedGlassVariant = 11
 
     /// Material choice, prototype switch: `defaults write <bundle id> PaneMaterial classic|regular`.
     /// Unset means clear glass on macOS 26+.
@@ -338,7 +381,12 @@ final class EditorWebView: NSView {
     /// and proportional autoresizing from a zero rect is a coin toss.
     override func layout() {
         super.layout()
-        material.frame = bounds
+        if glassClip.superview != nil {
+            glassClip.frame = bounds
+            material.frame = glassClip.bounds.insetBy(dx: -Self.glassOverscan, dy: -Self.glassOverscan)
+        } else {
+            material.frame = bounds
+        }
         webView.frame = bounds
         dragOverlay.frame = bounds
     }
