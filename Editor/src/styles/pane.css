@@ -262,7 +262,7 @@ body {
  * The footer's box never moves either way — it feeds `reportContentHeight` (decision 41). */
 .pane:not([data-hover]) .pane__title,
 .pane:not([data-hover]) .pane__words {
-  color: var(--text-faint);
+  color: var(--chrome-label-rest);
 }
 
 /* The pin never fades, unlike the buttons.
@@ -318,8 +318,9 @@ body {
   max-width: 55%;
   text-align: center;
   font-size: var(--size-footer);
-  font-weight: 500;
-  color: var(--text-quaternary);
+  /* 600, not the 500 it was: thin strokes are what a wallpaper shows through. */
+  font-weight: 600;
+  color: var(--chrome-label);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -337,7 +338,7 @@ body {
   border: 0;
   border-radius: var(--radius-button);
   background: transparent;
-  color: var(--text-quaternary);
+  color: var(--chrome-control);
   font-family: inherit;
   -webkit-app-region: no-drag;
 }
@@ -352,12 +353,19 @@ body {
  * because the dot has to light even where `elementFromPoint` would land on the title bar behind it. */
 .icon-button:hover,
 .icon-button[data-pointer] {
-  background: var(--fill-hover);
+  background: var(--fill-chrome-hover);
+  /* Colour answers the pointer as well as the fill: a wash alone was 1.14:1 against the panel. The
+   * pinned and keep-on-top rules are (1,2,0) and keep their accent over this. */
+  color: var(--chrome-control-hover);
+}
+
+.icon-button:active {
+  background: var(--fill-chrome-pressed);
 }
 
 .icon-button--plus {
   font-size: 17px;
-  font-weight: 400;
+  font-weight: 500;
   line-height: 1;
 }
 
@@ -365,7 +373,7 @@ body {
  * discovery path frame 2a spent and never bought anything with (decision 54). */
 .icon-button--cmd {
   font-size: 14px;
-  font-weight: 400;
+  font-weight: 500;
   line-height: 1;
 }
 
@@ -380,7 +388,7 @@ body {
 
 .icon-button__lines i {
   width: 12px;
-  height: 1.5px;
+  height: 1.75px;
   border-radius: 1px;
   background: currentColor;
 }
@@ -543,8 +551,9 @@ body {
   height: var(--footer-height);
   padding: 0 var(--titlebar-padding-x);
   border-top: 1px solid var(--separator);
-  color: var(--text-quaternary);
+  color: var(--chrome-label);
   font-size: var(--size-footer);
+  font-weight: 500;
 }
 
 /* Two spacers around the count, one element each, exactly as the design's markup has them. */
@@ -561,6 +570,7 @@ body {
   height: 24px;
   border-radius: var(--radius-button-sm);
   font-size: 13px;
+  font-weight: 500;
 }
 
 /* ---- Format bar -------------------------------------------------------------------------------
@@ -647,7 +657,8 @@ body {
 
 .format-bar button:hover,
 .format-bar button[data-pointer] {
-  background: var(--fill-hover);
+  background: var(--fill-chrome-hover);
+  color: var(--chrome-control-hover);
 }
 
 /* Active state is a pressed fill, NOT accent — accent is reserved for interactive state, and a
