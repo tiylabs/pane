@@ -152,7 +152,10 @@ as a literal in Swift or the editor — and the tests fail if a language falls b
 ## Commits
 
 One logical change per commit, and a message in the form `type: concise description` where type is
-`feat`, `fix`, `refactor`, `docs`, `chore` or `test`.
+`feat`, `fix`, `refactor`, `docs`, `chore`, `test`, `ci`, `build`, `perf`, `style` or `revert`. A
+scope and a gitmoji are welcome: `feat(settings): ✨ Add adjustable panel opacity`. CI rejects a
+push or pull request whose new commits do not match; run `Scripts/check-commit-msg.sh` to check
+yours first (it looks at the commits `origin/dev` does not have).
 
 ## License
 

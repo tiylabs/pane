@@ -11,6 +11,35 @@ on:
   pull_request:
 
 jobs:
+  # Cheap and runs on Linux, so a bad message fails in seconds instead of after the macOS build.
+  # Only the commits this push or pull request adds are checked; older history is left alone.
+  commit-message:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Check commit messages
+        env:
+          EVENT: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+          PUSH_AFTER: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" = "pull_request" ]; then
+            Scripts/check-commit-msg.sh "$PR_BASE" "$PR_HEAD"
+          elif [ "$PUSH_BEFORE" != "0000000000000000000000000000000000000000" ] \
+               && git cat-file -e "${PUSH_BEFORE}^{commit}" 2>/dev/null; then
+            Scripts/check-commit-msg.sh "$PUSH_BEFORE" "$PUSH_AFTER"
+          else
+            # A new branch, or a force-push that dropped the old tip: there is no usable range, so
+            # check the tip commit only.
+            Scripts/check-commit-msg.sh "$PUSH_AFTER"
+          fi
+
   build:
     runs-on: macos-latest
     steps:
