@@ -134,23 +134,44 @@ func runSettingsTests() {
         }
 
         Check.test("opacity takes precedence over the old switch") {
-            Check.equal(decode(#"{"translucentPanes":false,"panelOpacity":0.4}"#)?.panelOpacity, 0.4)
+            Check.equal(decode(#"{"translucentPanes":false,"panelOpacity":0.6}"#)?.panelOpacity, 0.6)
         }
 
         Check.test("clamps hand-edited opacity without losing other settings") {
-            Check.equal(decode(#"{"panelOpacity":-1,"textSize":21}"#)?.panelOpacity, 0)
+            Check.equal(decode(#"{"panelOpacity":-1,"textSize":21}"#)?.panelOpacity, 0.5)
+            Check.equal(decode(#"{"panelOpacity":0.2}"#)?.panelOpacity, 0.5)
             let high = decode(#"{"panelOpacity":2,"textSize":21}"#)
             Check.equal(high?.panelOpacity, 1)
             Check.equal(high?.textSize, 21)
         }
 
         Check.test("transparency survives saving and reopening at both ends and in between") {
-            for opacity in [0.0, 0.25, Settings.defaultPanelOpacity, 1.0] {
+            for opacity in [0.5, 0.6, Settings.defaultPanelOpacity, 1.0] {
                 let settings = Settings(panelOpacity: opacity)
                 let data = try! JSONEncoder().encode(settings)
                 Check.equal(try! JSONDecoder().decode(Settings.self, from: data).panelOpacity, opacity)
                 let file = try! JSONSerialization.jsonObject(with: data) as! [String: Any]
                 Check.expect(file["translucentPanes"] == nil, "save only the new setting")
+            }
+        }
+    }
+
+    Check.suite("Panel transparency slider") {
+        Check.test("the default sits in the middle of the slider") {
+            Check.equal(Settings.transparencySliderValue(forOpacity: Settings.defaultPanelOpacity), 50)
+        }
+
+        Check.test("the slider's ends are the ends of the opacity range") {
+            Check.equal(Settings.transparencySliderValue(forOpacity: 1), 0)
+            Check.equal(Settings.transparencySliderValue(forOpacity: 0.5), 100)
+            Check.equal(Settings.opacity(forTransparencySliderValue: 0), 1)
+            Check.equal(Settings.opacity(forTransparencySliderValue: 100), 0.5)
+        }
+
+        Check.test("every whole slider position survives the round trip") {
+            for position in 0...100 {
+                let opacity = Settings.opacity(forTransparencySliderValue: Double(position))
+                Check.equal(Settings.transparencySliderValue(forOpacity: opacity).rounded(), Double(position))
             }
         }
     }

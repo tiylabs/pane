@@ -320,8 +320,22 @@ public struct Settings: Codable, Equatable, Sendable {
     /// 0 is transparent, 1 is opaque. The Settings slider presents the inverse as transparency.
     public var panelOpacity: Double
 
-    public static let panelOpacityRange: ClosedRange<Double> = 0...1
-    public static let defaultPanelOpacity: Double = 0.7
+    /// Half of the full 0...1: below 0.5 the pane is too see-through to read, so the slider's whole
+    /// travel is spent on the half that is usable. A saved value below it clamps up to it.
+    public static let panelOpacityRange: ClosedRange<Double> = 0.5...1
+    public static let defaultPanelOpacity: Double = 0.75
+
+    /// The Settings slider's position, 0...100 (shown as a percentage of transparency), for an
+    /// opacity. Stretched over `panelOpacityRange`, so 100 is the most transparent the pane gets
+    /// rather than fully invisible.
+    public static func transparencySliderValue(forOpacity opacity: Double) -> Double {
+        (1 - opacity) / (1 - panelOpacityRange.lowerBound) * 100
+    }
+
+    /// The inverse of `transparencySliderValue(forOpacity:)`.
+    public static func opacity(forTransparencySliderValue value: Double) -> Double {
+        1 - value / 100 * (1 - panelOpacityRange.lowerBound)
+    }
 
     private enum LegacyCodingKeys: String, CodingKey {
         case translucentPanes

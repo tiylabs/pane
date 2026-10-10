@@ -58,7 +58,7 @@ final class AppearanceSettingsViewController: NSViewController {
 
         // ---- panel transparency -------------------------------------------------------------
         transparencySlider = NSSlider(
-            value: (1 - current.panelOpacity) * 100, minValue: 0, maxValue: 100,
+            value: Settings.transparencySliderValue(forOpacity: current.panelOpacity), minValue: 0, maxValue: 100,
             target: self, action: #selector(transparencyChanged)
         )
         transparencySlider.isContinuous = true
@@ -151,7 +151,7 @@ final class AppearanceSettingsViewController: NSViewController {
         let accent = Settings.accentColours(for: current.accent).light
         for swatch in swatches { swatch.isChosen = swatch.hex == accent }
         sizeField?.stringValue = "\(Int(current.textSize)) px"
-        let transparency = ((1 - current.panelOpacity) * 100).rounded()
+        let transparency = Settings.transparencySliderValue(forOpacity: current.panelOpacity).rounded()
         transparencySlider?.doubleValue = transparency
         transparencyField?.stringValue = "\(Int(transparency))%"
         selectTheme(current.markdownTheme)
@@ -216,7 +216,7 @@ final class AppearanceSettingsViewController: NSViewController {
         let transparency = sender.doubleValue.rounded()
         sender.doubleValue = transparency
         transparencyField.stringValue = "\(Int(transparency))%"
-        settings.update { $0.panelOpacity = 1 - transparency / 100 }
+        settings.update { $0.panelOpacity = Settings.opacity(forTransparencySliderValue: transparency) }
     }
 }
 
